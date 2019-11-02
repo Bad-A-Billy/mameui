@@ -5,7 +5,7 @@
 /***************************************************************************
 
   Screenshot.cpp
-  
+
   Displays snapshots, control panels and other pictures.
   Files must be of type .PNG, .JPG or .JPEG .
   If Software tab is chosen, software-specific pictures can be displayed.
@@ -606,6 +606,13 @@ static BOOL LoadDIB(const char *filename, HGLOBAL *phDIB, HPALETTE *pPal, int pi
 			if (filerr != osd_file::error::NONE)
 			{
 				fname = string(system_name) + PATH_SEPARATOR + string(system_name) + ext;
+				filerr = OpenRawDIBFile(partpath, fname.c_str(), file);
+			}
+
+			//%g/%g+0000.png
+			if (filerr != osd_file::error::NONE)
+			{
+				fname = string(system_name) + PATH_SEPARATOR + string(system_name) + "0000.png";
 				filerr = OpenRawDIBFile(partpath, fname.c_str(), file);
 			}
 
