@@ -36,7 +36,7 @@ namespace plib
 		static constexpr const int NSQ = (N < 0 ? -N * N : N * N);
 		static constexpr const int Np1 = (N == 0) ? 0 : (N < 0 ? N - 1 : N + 1);
 
-		COPYASSIGNMOVE(pmatrix_cr_t, default)
+		PCOPYASSIGNMOVE(pmatrix_cr_t, default)
 
 		enum constants_e
 		{
@@ -83,6 +83,13 @@ namespace plib
 				A[i] = scalar;
 		}
 
+		void set_row_scalar(C r, T val) noexcept
+		{
+			C ri = row_idx[r];
+			while (ri < row_idx[r+1])
+				A[ri++] = val;
+		}
+
 		void set(C r, C c, T val) noexcept
 		{
 			C ri = row_idx[r];
@@ -110,11 +117,11 @@ namespace plib
 
 		template <typename M>
 		void build_from_fill_mat(const M &f, std::size_t max_fill = FILL_INFINITY - 1,
-			std::size_t band_width = FILL_INFINITY)
+			std::size_t band_width = FILL_INFINITY) noexcept(false)
 		{
 			C nz = 0;
 			if (nz_num != 0)
-				pthrow<pexception>("build_from_mat only allowed on empty CR matrix");
+				throw pexception("build_from_mat only allowed on empty CR matrix");
 			for (std::size_t k=0; k < size(); k++)
 			{
 				row_idx[k] = nz;
@@ -177,7 +184,7 @@ namespace plib
 
 		// throws error if P(source)>P(destination)
 		template <typename LUMAT>
-		void slim_copy_from(LUMAT & src)
+		void slim_copy_from(LUMAT & src) noexcept(false)
 		{
 			for (std::size_t r=0; r<src.size(); r++)
 			{
@@ -188,7 +195,7 @@ namespace plib
 					while (col_idx[dp] < src.col_idx[sp])
 						A[dp++] = 0;
 					if (row_idx[r+1] <= dp || col_idx[dp] != src.col_idx[sp])
-						pthrow<pexception>("slim_copy_from error");
+						throw pexception("slim_copy_from error");
 					A[dp++] = src.A[sp];
 				}
 				// fill remaining elements in row
@@ -242,7 +249,7 @@ namespace plib
 		using base = B;
 		using index_type = typename base::index_type;
 
-		COPYASSIGNMOVE(pGEmatrix_cr_t, default)
+		PCOPYASSIGNMOVE(pGEmatrix_cr_t, default)
 
 		explicit pGEmatrix_cr_t(std::size_t n)
 		: B(n)
@@ -337,8 +344,8 @@ namespace plib
 		void gaussian_elimination_parallel(V & RHS)
 		{
 			//printf("omp: %ld %d %d\n", m_ge_par.size(), nz_num, (int)m_ge_par[m_ge_par.size()-2].size());
-			for (auto l = 0ul; l < m_ge_par.size(); l++)
-				plib::omp::for_static(base::nz_num, 0ul, m_ge_par[l].size(), [this, &RHS, &l] (unsigned ll)
+			for (auto l = 0UL; l < m_ge_par.size(); l++)
+				plib::omp::for_static(base::nz_num, 0UL, m_ge_par[l].size(), [this, &RHS, &l] (unsigned ll)
 				{
 					auto &i = m_ge_par[l][ll];
 					{
@@ -476,7 +483,7 @@ namespace plib
 		using base = B;
 		using index_type = typename base::index_type;
 
-		COPYASSIGNMOVE(pLUmatrix_cr_t, default)
+		PCOPYASSIGNMOVE(pLUmatrix_cr_t, default)
 
 		explicit pLUmatrix_cr_t(std::size_t n)
 		: B(n)

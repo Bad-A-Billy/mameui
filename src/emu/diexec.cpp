@@ -410,9 +410,14 @@ void device_execute_interface::interface_post_start()
 	device().save_item(NAME(m_totalcycles));
 	device().save_item(NAME(m_localtime));
 
+	// it's more efficient and causes less clutter to save these this way
+	device().save_item(STRUCT_MEMBER(m_input, m_stored_vector));
+	device().save_item(STRUCT_MEMBER(m_input, m_curvector));
+	device().save_item(STRUCT_MEMBER(m_input, m_curstate));
+
 	// fill in the input states and IRQ callback information
 	for (int line = 0; line < ARRAY_LENGTH(m_input); line++)
-		m_input[line].start(this, line);
+		m_input[line].start(*this, line);
 }
 
 
@@ -615,33 +620,6 @@ void device_execute_interface::pulse_input_line(int irqline, const attotime &dur
 }
 
 
-//-------------------------------------------------
-//  pulse_input_line_and_vector - "pulse" an
-//  input line by asserting it and then clearing it
-//  later, specifying a vector
-//-------------------------------------------------
-
-void device_execute_interface::pulse_input_line_and_vector(int irqline, int vector, const attotime &duration)
-{
-	// treat instantaneous pulses as ASSERT+CLEAR
-	if (duration == attotime::zero)
-	{
-		if (irqline != INPUT_LINE_RESET && !input_edge_triggered(irqline))
-			throw emu_fatalerror("device '%s': zero-width pulse is not allowed for input line %d\n", device().tag(), irqline);
-
-		set_input_line_and_vector(irqline, ASSERT_LINE, vector);
-		set_input_line_and_vector(irqline, CLEAR_LINE, vector);
-	}
-	else
-	{
-		set_input_line_and_vector(irqline, ASSERT_LINE, vector);
-
-		attotime target_time = local_time() + duration;
-		m_scheduler->timer_set(target_time - m_scheduler->time(), timer_expired_delegate(FUNC(device_execute_interface::irq_pulse_clear), this), irqline);
-	}
-}
-
-
 
 //**************************************************************************
 //  DEVICE INPUT
@@ -668,17 +646,12 @@ device_execute_interface::device_input::device_input()
 //  can set ourselves up
 //-------------------------------------------------
 
-void device_execute_interface::device_input::start(device_execute_interface *execute, int linenum)
+void device_execute_interface::device_input::start(device_execute_interface &execute, int linenum)
 {
-	m_execute = execute;
+	m_execute = &execute;
 	m_linenum = linenum;
 
 	reset();
-
-	device_t &device = m_execute->device();
-	device.save_item(NAME(m_stored_vector), m_linenum);
-	device.save_item(NAME(m_curvector), m_linenum);
-	device.save_item(NAME(m_curstate), m_linenum);
 }
 
 
@@ -689,7 +662,6 @@ void device_execute_interface::device_input::start(device_execute_interface *exe
 void device_execute_interface::device_input::reset()
 {
 	m_curvector = m_stored_vector = m_execute->default_irq_vector(m_linenum);
-	m_qindex = 0;
 }
 
 

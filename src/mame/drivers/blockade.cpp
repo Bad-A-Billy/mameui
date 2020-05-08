@@ -377,7 +377,7 @@ GFXDECODE_END
 TILE_GET_INFO_MEMBER( blockade_state::tile_info )
 {
 	int code = m_videoram[tile_index];
-	SET_TILE_INFO_MEMBER(0, code, 0, 0);
+	tileinfo.set(0, code, 0, 0);
 }
 
 
@@ -415,18 +415,15 @@ DISCRETE_SOUND_END
 WRITE8_MEMBER( blockade_state::sound_freq_w )
 {
 	m_discrete->write(BLOCKADE_NOTE_DATA, data);
-	return;
 }
 
 WRITE8_MEMBER( blockade_state::env_on_w )
 {
 	m_samples->start(0, 0);
-	return;
 }
 
 WRITE8_MEMBER( blockade_state::env_off_w )
 {
-	return;
 }
 
 const char *const blockade_sample_names[] =

@@ -47,7 +47,7 @@ namespace devices
 
 	NETLIB_UPDATE(extclock)
 	{
-		m_Q.push((m_cnt & 1) ^ 1, m_inc[m_cnt] + m_off);
+		m_Q.push((m_cnt & 1) ^ 1, m_inc[m_cnt] + m_off());
 		m_off = netlist_time::zero();
 		if (++m_cnt >= m_size)
 			m_cnt = 0;
@@ -72,6 +72,9 @@ namespace devices
 	NETLIB_DEVICE_IMPL(mainclock,           "MAINCLOCK",              "FREQ")
 	NETLIB_DEVICE_IMPL(gnd,                 "GNDA",                   "")
 	NETLIB_DEVICE_IMPL(netlistparams,       "PARAMETER",              "")
+
+	using NETLIB_NAME(logic_input8) = NETLIB_NAME(logic_inputN)<8>;
+	NETLIB_DEVICE_IMPL(logic_input8,         "LOGIC_INPUT8",            "IN,FAMILY")
 
 	NETLIB_DEVICE_IMPL(logic_input,         "LOGIC_INPUT",            "IN,FAMILY")
 	NETLIB_DEVICE_IMPL_ALIAS(logic_input_ttl, logic_input, "TTL_INPUT", "IN")

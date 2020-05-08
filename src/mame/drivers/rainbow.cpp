@@ -634,7 +634,7 @@ protected:
 
 	required_device<corvus_hdc_device> m_corvus_hdc;
 
-	required_device<upd7201_new_device> m_mpsc;
+	required_device<upd7201_device> m_mpsc;
 	required_device<com8116_003_device> m_dbrg;
 	required_device<rs232_port_device> m_comm_port;
 
@@ -774,7 +774,6 @@ public:
 	void rainbow_modelb(machine_config &config);
 
 private:
-	virtual void machine_start() override;
 	virtual void machine_reset() override;
 
 	void rainbow8088_map(address_map &map);
@@ -912,23 +911,7 @@ void rainbow_base_state::machine_start()
 	save_item(NAME(m_irq_mask));
 }
 
-void rainbow_modelb_state::machine_start()
-{
-	rainbow_base_state::machine_start();
 
-	uint8_t *rom = memregion("maincpu")->base();
-	if (rom[0xf4000 + 0x3ffc] == 0x31) // 100-B (5.01)    0x35 would test for V5.05
-	{
-		rom[0xf4000 + 0x0303] = 0x00; // disable CRC check
-		rom[0xf4000 + 0x135e] = 0x00; // Floppy / RX-50 workaround: in case of Z80 RESPONSE FAILURE ($80 bit set in AL), do not block floppy access.
-
-		rom[0xf4000 + 0x198F] = 0xeb; // cond.JMP to uncond.JMP (disables error message 60...)
-
-		rom[0xf4000 + 0x315D] = 0x00; // AND DL,0 (make sure DL is zero before ROM_Initialize7201)
-		rom[0xf4000 + 0x315E] = 0xe2;
-		rom[0xf4000 + 0x315F] = 0x02;
-	}
-}
 
 void rainbow_base_state::rainbow8088_base_map(address_map &map)
 {
@@ -1657,7 +1640,7 @@ READ8_MEMBER(rainbow_base_state::corvus_status_r)
 		output().set_value("led2", 0);
 		switch_off_timer->adjust(attotime::from_msec(500));
 
-		uint8_t status = m_corvus_hdc->status_r(space, 0);
+		uint8_t status = m_corvus_hdc->status_r();
 		uint8_t data = BIT(status, 7); // 0x80 BUSY (Set = Busy, Clear = Ready)
 		data |= BIT(status, 6) << 1; // 0x40 DIR. (Controller -> Host, or Host->Controller)
 		return data;
@@ -2788,7 +2771,7 @@ WRITE8_MEMBER(rainbow_base_state::diagnostic_w) // 8088 (port 0A WRITTEN). Fig.4
 	// Install 8088 read / write handler once loopback test is over
 	if ( !(data & 32) && (m_diagnostic & 32) )
 	{
-			io.install_readwrite_handler(0x40, 0x43, read8sm_delegate(*m_mpsc, FUNC(upd7201_new_device::cd_ba_r)), write8sm_delegate(*m_mpsc, FUNC(upd7201_new_device::cd_ba_w)));
+			io.install_readwrite_handler(0x40, 0x43, read8sm_delegate(*m_mpsc, FUNC(upd7201_device::cd_ba_r)), write8sm_delegate(*m_mpsc, FUNC(upd7201_device::cd_ba_w)));
 			logerror("\n **** COMM HANDLER INSTALLED **** ");
 			//popmessage("Autoboot from drive %c", m_p_nvram[0xab] ? (64 + m_p_nvram[0xab]) : 0x3F );
 	}
@@ -3323,20 +3306,20 @@ void rainbow_base_state::rainbow_base(machine_config &config)
 	m_dbrg->fr_handler().set(FUNC(rainbow_base_state::dbrg_fr_w));
 	m_dbrg->ft_handler().set(FUNC(rainbow_base_state::dbrg_ft_w));
 
-	UPD7201_NEW(config, m_mpsc, 24.0734_MHz_XTAL / 5 / 2); // 2.4073 MHz (nominally 2.5 MHz)
+	UPD7201(config, m_mpsc, 24.0734_MHz_XTAL / 5 / 2); // 2.4073 MHz (nominally 2.5 MHz)
 	m_mpsc->out_int_callback().set(FUNC(rainbow_base_state::mpsc_irq));
 	m_mpsc->out_txda_callback().set(m_comm_port, FUNC(rs232_port_device::write_txd));
 	m_mpsc->out_txdb_callback().set("printer", FUNC(rs232_port_device::write_txd));
 	// RTS and DTR outputs are not connected
 
 	RS232_PORT(config, m_comm_port, default_rs232_devices, nullptr);
-	m_comm_port->rxd_handler().set(m_mpsc, FUNC(upd7201_new_device::rxa_w));
-	m_comm_port->cts_handler().set(m_mpsc, FUNC(upd7201_new_device::ctsa_w));
-	m_comm_port->dcd_handler().set(m_mpsc, FUNC(upd7201_new_device::dcda_w));
+	m_comm_port->rxd_handler().set(m_mpsc, FUNC(upd7201_device::rxa_w));
+	m_comm_port->cts_handler().set(m_mpsc, FUNC(upd7201_device::ctsa_w));
+	m_comm_port->dcd_handler().set(m_mpsc, FUNC(upd7201_device::dcda_w));
 
 	rs232_port_device &printer(RS232_PORT(config, "printer", default_rs232_devices, nullptr));
-	printer.rxd_handler().set(m_mpsc, FUNC(upd7201_new_device::rxb_w));
-	printer.dcd_handler().set(m_mpsc, FUNC(upd7201_new_device::ctsb_w)); // actually DTR
+	printer.rxd_handler().set(m_mpsc, FUNC(upd7201_device::rxb_w));
+	printer.dcd_handler().set(m_mpsc, FUNC(upd7201_device::ctsb_w)); // actually DTR
 
 	m_comm_port->option_add("microsoft_mouse", MSFT_HLE_SERIAL_MOUSE);
 	m_comm_port->option_add("logitech_mouse", LOGITECH_HLE_SERIAL_MOUSE);
@@ -3406,21 +3389,24 @@ void rainbow_modelb_state::rainbow_modelb(machine_config &config)
 ROM_START(rainbow100a)
 	ROM_REGION(0x100000, "maincpu", 0)
 
-	ROM_LOAD("23-176e4-00.bin", 0xFA000, 0x2000, NO_DUMP) // ROM (FA000-FBFFF) (E89) 8 K
-	ROM_LOAD("23-177e4-00.bin", 0xFC000, 0x2000, NO_DUMP) // ROM (FC000-FDFFF) (E90) 8 K
+	ROM_LOAD("23-176e4-00.e89", 0xfa000, 0x2000, CRC(405e9619) SHA1(86604dccea84b46e05d705abeda25b12f7cc8c59)) // ROM (FA000-FBFFF) (E89) 8 K
+	ROM_LOAD("23-177e4-00.e90", 0xfc000, 0x2000, CRC(1ec72a66) SHA1(ed19944ae711e97d6bec34c885be04c4c3c95852)) // ROM (FC000-FDFFF) (E90) 8 K
+	ROM_FILL(0xfa26d, 1, 0x00) // [0xFA000 + 0x026d] disable CRC check   [100-A ROM]
+	ROM_FILL(0xfadea, 1, 0x00) // [0xFA000 + 0x0dea] Floppy workaround: in case of Z80 RESPONSE FAILURE ($80 bit set in AL), don't block floppy access
 
 	// SOCKETED LANGUAGE ROM (E91) with 1 single localization per ROM -
-	ROM_LOAD("23-092e4-00.bin", 0xFE000, 0x2000, NO_DUMP)  // ROM (FE000-FFFFF) (E91) 8 K - English (?)
+	ROM_LOAD("23-092e4-00.e91", 0xfe000, 0x2000, CRC(c269175a) SHA1(e82cf69b811f1e376621277f81db28e299fe06f0))  // ROM (FE000-FFFFF) (E91) 8 K - English (?)
 	// See also MP-01491-00 - PC100A FIELD MAINTENANCE SET. Appendix A of EK-RB100 Rainbow
 	// Technical Manual Addendum f.100A and 100B (Dec.84) lists 15 localizations / part numbers
 
 	ROM_REGION(0x1000, "chargen", 0) // [E98] 2732 (4 K) EPROM
-	ROM_LOAD("23-020e3-00.bin", 0x0000, 0x1000, CRC(1685e452) SHA1(bc299ff1cb74afcededf1a7beb9001188fdcf02f))
+	ROM_LOAD("23-020e3-00.e98", 0x0000, 0x1000, CRC(b5ee2824) SHA1(8e940e32f39ec5c51cae0351ddd59ab06416d5c6))
 
 	// Z80 ARBITRATION PROM
 	ROM_REGION(0x100, "prom", 0)
 	ROM_LOAD("23-090b1.mmi6308-ij.e11", 0x0000, 0x0100, CRC(cac3a7e3) SHA1(2d0468cda36fa287f705364c56dbf62f548d2e4c) ) // MMI 6308-IJ; Silkscreen stamp: "LM8413 // 090B1"; 256x8 Open Collector prom @E11, same prom is @E13 on 100-B
 ROM_END
+
 
 //----------------------------------------------------------------------------------------
 // ROM definition for 100-B (system module 70-19974-02, PSU H7842-D)
@@ -3438,6 +3424,9 @@ ROM_START(rainbow)
 	// BOOT ROM
 	ROM_LOAD("23-022e5-00.bin", 0xf0000, 0x4000, CRC(9d1332b4) SHA1(736306d2a36bd44f95a39b36ebbab211cc8fea6e))
 	ROM_RELOAD(0xf4000, 0x4000)
+	ROM_FILL(0xf4303, 1, 0x00) // [0xf4000 + 0x0303] disable CRC check   [100-B ROM]
+	ROM_FILL(0xf535e, 1, 0x00) // [0xf4000 + 0x135e] Floppy workaround: in case of Z80 RESPONSE FAILURE ($80 bit set in AL), don't block floppy access
+
 
 	// LANGUAGE ROM
 	ROM_LOAD("23-020e5-00.bin", 0xf8000, 0x4000, CRC(8638712f) SHA1(8269b0d95dc6efbe67d500dac3999df4838625d8)) // German, French, English
@@ -3449,7 +3438,7 @@ ROM_START(rainbow)
 
 	// CHARACTER GENERATOR (E3-03)
 	ROM_REGION(0x1000, "chargen", 0)
-	ROM_LOAD("23-037e3.bin", 0x0000, 0x1000, CRC(1685e452) SHA1(bc299ff1cb74afcededf1a7beb9001188fdcf02f))
+	ROM_LOAD("23-037e3.bin", 0x0000, 0x1000, CRC(1685e452) SHA1(bc299ff1cb74afcededf1a7beb9001188fdcf02f)) // the 'invalid character' symbol and the yen symbol were changed vs 23-020e3 from 100a
 
 	// Z80 ARBITRATION PROM
 	ROM_REGION(0x100, "prom", 0)

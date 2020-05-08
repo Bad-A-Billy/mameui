@@ -84,6 +84,8 @@ namespace devices
 		, m_feedback(*this, "FB")
 		, m_Q(*this, "Q")
 		, m_freq(*this, "FREQ", nlconst::magic(7159000.0 * 5.0))
+		, m_FAMILY(*this, "FAMILY", "FAMILY(TYPE=TTL)")
+		, m_supply(*this)
 		{
 			m_inc = netlist_time::from_fp(plib::reciprocal(m_freq()*nlconst::two()));
 
@@ -107,7 +109,10 @@ namespace devices
 
 		param_fp_t m_freq;
 		netlist_time m_inc;
-	};
+
+		param_model_t m_FAMILY;
+		NETLIB_NAME(power_pins) m_supply;
+};
 
 	// -----------------------------------------------------------------------------
 	// varclock
@@ -174,8 +179,6 @@ namespace devices
 			netlist_time::mult_type total = 0;
 			for (unsigned i=0; i<m_size; i++)
 			{
-				// FIXME: use pstonum_ne
-				//pati[i] = plib::pstonum<decltype(pati[i])>(pat[i]);
 				pati[i] = plib::pstonum<std::int64_t>(pat[i]);
 				total += pati[i];
 			}
@@ -230,12 +233,47 @@ namespace devices
 
 		NETLIB_UPDATEI() { }
 		NETLIB_RESETI() { m_Q.initial(0); }
-		NETLIB_UPDATE_PARAMI() { m_Q.push(m_IN() & 1, netlist_time::from_nsec(1)); }
+		NETLIB_UPDATE_PARAMI()
+		{
+			//printf("%s %d\n", name().c_str(), m_IN());
+			m_Q.push(m_IN() & 1, netlist_time::from_nsec(1));
+		}
 
 	private:
 		logic_output_t m_Q;
 
 		param_logic_t m_IN;
+		param_model_t m_FAMILY;
+		NETLIB_NAME(power_pins) m_supply;
+	};
+	template<std::size_t N>
+	NETLIB_OBJECT(logic_inputN)
+	{
+		NETLIB_CONSTRUCTOR(logic_inputN)
+		, m_Q(*this, "Q{}")
+		, m_IN(*this, "IN", 0)
+		// make sure we get the family first
+		, m_FAMILY(*this, "FAMILY", "FAMILY(TYPE=TTL)")
+		, m_supply(*this)
+		{
+			set_logic_family(state().setup().family_from_model(m_FAMILY()));
+			for (auto &q : m_Q)
+				q.set_logic_family(this->logic_family());
+		}
+
+		NETLIB_UPDATEI() { }
+		NETLIB_RESETI() { for (auto &q : m_Q) q.initial(0); }
+		NETLIB_UPDATE_PARAMI()
+		{
+			//printf("%s %d\n", name().c_str(), m_IN());
+			for (std::size_t i=0; i<N; i++)
+				m_Q[i].push((m_IN()>>i) & 1, netlist_time::from_nsec(1));
+		}
+
+	private:
+		object_array_t<logic_output_t, N> m_Q;
+
+		param_int_t m_IN;
 		param_model_t m_FAMILY;
 		NETLIB_NAME(power_pins) m_supply;
 	};
@@ -335,7 +373,6 @@ namespace devices
 
 	private:
 		analog::NETLIB_NAME(twoterm) m_RIN;
-		// Fixme: only works if the device is time-stepped - need to rework
 		analog::NETLIB_NAME(twoterm) m_ROUT;
 		analog_input_t m_I;
 		analog_output_t m_Q;
@@ -346,8 +383,6 @@ namespace devices
 
 	// -----------------------------------------------------------------------------
 	// nld_function
-	//
-	// FIXME: Currently a proof of concept to get congo bongo working
 	// ----------------------------------------------------------------------------- */
 
 	NETLIB_OBJECT(function)
@@ -428,9 +463,10 @@ namespace devices
 				const nl_fptype R = state ? m_RON() : m_ROFF();
 
 				// FIXME: We only need to update the net first if this is a time stepping net
-				m_R.update();
-				m_R.set_R(R);
-				m_R.solve_later();
+				m_R.change_state([this, &R]()
+				{
+					m_R.set_R(R);
+				});
 			}
 		}
 

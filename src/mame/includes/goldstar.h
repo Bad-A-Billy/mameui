@@ -53,6 +53,7 @@ public:
 	void init_goldstar();
 	void init_jkrmast();
 	void init_pkrmast();
+	void init_crazybonb();
 	void init_cmast91();
 	void init_wcherry();
 	void init_super9();
@@ -65,6 +66,7 @@ public:
 	DECLARE_VIDEO_START(cherrym);
 	void cmast91_palette(palette_device &palette) const;
 	void lucky8_palette(palette_device &palette) const;
+	void nfm_palette(palette_device &palette) const;
 	uint32_t screen_update_goldstar(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_cmast91(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
@@ -72,6 +74,7 @@ public:
 	void ladylinrb(machine_config &config);
 	void wcherry(machine_config &config);
 	void crazybon(machine_config &config);
+	void crazybonb(machine_config &config);
 	void pkrmast(machine_config &config);
 	void moonlght(machine_config &config);
 	void kkotnoli(machine_config &config);
@@ -169,10 +172,14 @@ public:
 	void init_skill98();
 	void init_po33();
 	void init_match133();
-	void init_nfb96_dk();
+	void init_nfb96_a();
+	void init_nfb96_b();
+	void init_nfb96_c1();
+	void init_nfb96_c1_2();
 	void init_nfb96_c2();
 	void init_nfb96_d();
-	void init_nfb96_c1();
+	void init_nfb96_dk();
+	void init_nfb96_g();
 	void init_nfb96sea();
 	void init_fb2010();
 	void init_rp35();
@@ -181,20 +188,26 @@ public:
 	void init_rp96sub();
 	void init_tcl();
 	void init_super7();
+	void init_chthree();
+	void init_wcat3a();
 
 	uint32_t screen_update_amcoe1a(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
 	void cm(machine_config &config);
+	void cm97(machine_config &config);
 	void cmasterc(machine_config &config);
 	void amcoe1a(machine_config &config);
 	void nfm(machine_config &config);
 	void amcoe2(machine_config &config);
 	void amcoe1(machine_config &config);
 	void chryangl(machine_config &config);
+	void ss2001(machine_config &config);
 	void amcoe1_portmap(address_map &map);
 	void amcoe2_portmap(address_map &map);
 	void cm_portmap(address_map &map);
+	void cm97_portmap(address_map &map);
 	void chryangl_decrypted_opcodes_map(address_map &map);
+	void ss2001_portmap(address_map &map);
 
 protected:
 	// installed by various driver init handlers to get stuff to work
@@ -241,6 +254,7 @@ public:
 	void lucky8(machine_config &config);
 	void lucky8f(machine_config &config);
 	void lucky8k(machine_config &config);
+	void luckylad(machine_config &config);
 	void super972(machine_config &config);
 	void wcat3(machine_config &config);
 	void magodds(machine_config &config);
@@ -283,7 +297,7 @@ public:
 	void cb3c(machine_config &config);
 	void cb3e(machine_config &config);
 	void ncb3(machine_config &config);
-	void cm97(machine_config &config);
+	void eldoradd(machine_config &config);
 	void ncb3_map(address_map &map);
 	void chryangla_map(address_map &map);
 	void chryangla_decrypted_opcodes_map(address_map &map);

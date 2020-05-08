@@ -35,7 +35,7 @@ namespace plib {
 			m_source_location.emplace_back(plib::source_location("Unknown", 0));
 		}
 
-		COPYASSIGNMOVE(ptokenizer, delete)
+		PCOPYASSIGNMOVE(ptokenizer, delete)
 
 		virtual ~ptokenizer() = default;
 
@@ -66,11 +66,11 @@ namespace plib {
 		struct token_t
 		{
 			explicit token_t(token_type type)
-			: m_type(type), m_id(), m_token("")
+			: m_type(type), m_token("")
 			{
 			}
 			token_t(token_type type, const pstring &str)
-			: m_type(type), m_id(), m_token(str)
+			: m_type(type), m_token(str)
 			{
 			}
 			token_t(const token_id_t &id, const pstring &str)

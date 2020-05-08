@@ -151,12 +151,13 @@ namespace plib {
 		{
 			if (ret.is_type(token_type::token_type::ENDOFFILE))
 				return ret;
-			else if (m_support_line_markers && ret.is_type(token_type::LINEMARKER))
+
+			if (m_support_line_markers && ret.is_type(token_type::LINEMARKER))
 			{
 				bool benter(false);
 				bool bexit(false);
 				pstring file;
-				unsigned lineno;
+				unsigned lineno(0);
 
 				ret = get_token_internal();
 				if (!ret.is_type(token_type::NUMBER))
@@ -215,7 +216,8 @@ namespace plib {
 		}
 		if (m_support_line_markers && c == '#')
 			return token_t(token_type::LINEMARKER, "#");
-		else if (m_number_chars_start.find(c) != pstring::npos)
+
+		if (m_number_chars_start.find(c) != pstring::npos)
 		{
 			// read number while we receive number or identifier chars
 			// treat it as an identifier when there are identifier chars in it
@@ -232,7 +234,9 @@ namespace plib {
 			ungetc(c);
 			return token_t(ret, tokstr);
 		}
-		else if (m_identifier_chars.find(c) != pstring::npos)
+
+		// not a number, try identifier
+		if (m_identifier_chars.find(c) != pstring::npos)
 		{
 			// read identifier till non identifier char
 			pstring tokstr = "";
@@ -243,12 +247,12 @@ namespace plib {
 			}
 			ungetc(c);
 			auto id = m_tokens.find(tokstr);
-			if (id != m_tokens.end())
-				return token_t(id->second, tokstr);
-			else
-				return token_t(token_type::IDENTIFIER, tokstr);
+			return (id != m_tokens.end()) ?
+					token_t(id->second, tokstr)
+				:   token_t(token_type::IDENTIFIER, tokstr);
 		}
-		else if (c == m_string)
+
+		if (c == m_string)
 		{
 			pstring tokstr = "";
 			c = getc();
@@ -277,10 +281,9 @@ namespace plib {
 			}
 			ungetc(c);
 			auto id = m_tokens.find(tokstr);
-			if (id != m_tokens.end())
-				return token_t(id->second, tokstr);
-			else
-				return token_t(token_type::UNKNOWN, tokstr);
+			return (id != m_tokens.end()) ?
+					token_t(id->second, tokstr)
+				:   token_t(token_type::UNKNOWN, tokstr);
 		}
 	}
 
@@ -292,11 +295,11 @@ namespace plib {
 		pstring e = plib::pfmt("{1}:{2}:0: error: {3}\n")
 				(m_source_location.back().file_name(), m_source_location.back().line(), errs());
 		m_source_location.pop_back();
-		while (m_source_location.size() > 0)
+		while (!m_source_location.empty())
 		{
 			if (m_source_location.size() == 1)
 				trail = trail_first;
-			s = trail + plib::pfmt("{1}:{2}:0\n")(m_source_location.back().file_name(), m_source_location.back().line()) + s;
+			s = plib::pfmt("{1}{2}:{3}:0\n{4}")(trail, m_source_location.back().file_name(), m_source_location.back().line(), s);
 			m_source_location.pop_back();
 		}
 		verror("\n" + s + e + " " + currentline_str() + "\n");

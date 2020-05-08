@@ -75,7 +75,9 @@ protected:
 		M68HC05_COPCR,
 		M68HC05_PCOP,
 		M68HC05_NCOPE,
-		M68HC05_NCOP
+		M68HC05_NCOP,
+
+		M68HC705C8A_OPTION
 	};
 
 	enum { PORT_COUNT = 4 };
@@ -149,8 +151,8 @@ private:
 	u8      copcr_cm() const    { return m_copcr & 0x03; }
 
 	// digital I/O
-	devcb_read8         m_port_cb_r[PORT_COUNT];
-	devcb_write8        m_port_cb_w[PORT_COUNT];
+	devcb_read8::array<PORT_COUNT> m_port_cb_r;
+	devcb_write8::array<PORT_COUNT> m_port_cb_w;
 	u8                  m_port_bits[PORT_COUNT];
 	u8                  m_port_interrupt[PORT_COUNT];
 	u8                  m_port_input[PORT_COUNT];
@@ -241,6 +243,17 @@ protected:
 	virtual void device_reset() override;
 
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
+
+private:
+	required_region_ptr<u8> m_rom;
+
+	DECLARE_READ8_MEMBER(ram0_r);
+	DECLARE_WRITE8_MEMBER(ram0_w);
+	DECLARE_READ8_MEMBER(ram1_r);
+	DECLARE_WRITE8_MEMBER(ram1_w);
+
+	u8 m_ram[0x80];
+	u8 m_option;
 };
 
 

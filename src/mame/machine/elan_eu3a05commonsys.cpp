@@ -5,20 +5,20 @@
 #include "elan_eu3a05commonsys.h"
 
 /*
-	Both the Elan EU3A05 and EU3A14 CPU types implement some kind of custom interrupt handling
+    Both the Elan EU3A05 and EU3A14 CPU types implement some kind of custom interrupt handling
 
-	It isn't clear if this is a completely new addition to the CPU, or just an interface / controller
-	sitting on top of the existing NMI or IRQ support in the core providing custom vectors.
+    It isn't clear if this is a completely new addition to the CPU, or just an interface / controller
+    sitting on top of the existing NMI or IRQ support in the core providing custom vectors.
 
-	The interrupt handlers are 16 4-byte entries starting at 0xffb0 in memory space
+    The interrupt handlers are 16 4-byte entries starting at 0xffb0 in memory space
 
 */
 
 
 /*
-	-----------------------
+    -----------------------
     Custom Interrupt purposes
-	-----------------------
+    -----------------------
 
     TETRIS  (enables 5007 : 0a, 5008: 0f)
 
@@ -48,7 +48,7 @@
     ffdc (enabled) - probably P2 input related? ADC interrupt?
     accesses 501d / 501b
 
-	-----------------------
+    -----------------------
 
     SPACE INVADERS
 
@@ -76,14 +76,14 @@
     ffc8  (enabled by phoenix)
     decreases 304
     stuff with 50a5  bit 10
-	
+
     ffcc  (enabled by phoenix)
     uses 307
     stuff with 50a5  bit 20
 
     ffd0
     dead loop
-	 
+
     ffd4  (enabled by all games)
     main interrupt
 
@@ -105,63 +105,63 @@
     ffec
     dead loop
 
-	-----------------------
-	
-	AIR BLASTER JOYSTICK
+    -----------------------
 
-	all these 60xx jumps expect bank 00 or 0e or 3a or 7d to be active, so IRQs must be masked
+    AIR BLASTER JOYSTICK
 
-	ffb0: jmp to 6000  (ends up jumping to pointer from RAM)
-	ffb4: jmp to e08e  (stuff with 500c/500d/506e etc.)
-	ffb8: jmp to 601c  (stub handler) (has function in bank 0e - writes 00 then 01 to 50a5)
-	ffbc: jmp to 602a  (stub handler)
-	ffc0: jmp to 6038  (stub handler)
-	ffc4: jmp to 6046  (stub handler)
-	ffc8: jmp to 6054  (stub handler)
-	ffcc: jmp to 6062  (stub handler)
-	ffd0: jmp to 6070  (stub handler)
-	ffd4: jmp to 607e  (valid code - main IRQ?)
-	ffd8: jmp to 608c  (stub handler)
-	ffdc: jmp to 609a  (stub handler)
-	ffe0: jmp to 60a8  (stub handler)
-	ffe4: jmp to 60b6  (stub handler)
-	ffe8: jmp to 60c4  (stub handler)
-	ffec: jmp to 60d2  (stub handler)
+    all these 60xx jumps expect bank 00 or 0e or 3a or 7d to be active, so IRQs must be masked
 
-	fff0: 7d
+    ffb0: jmp to 6000  (ends up jumping to pointer from RAM)
+    ffb4: jmp to e08e  (stuff with 500c/500d/506e etc.)
+    ffb8: jmp to 601c  (stub handler) (has function in bank 0e - writes 00 then 01 to 50a5)
+    ffbc: jmp to 602a  (stub handler)
+    ffc0: jmp to 6038  (stub handler)
+    ffc4: jmp to 6046  (stub handler)
+    ffc8: jmp to 6054  (stub handler)
+    ffcc: jmp to 6062  (stub handler)
+    ffd0: jmp to 6070  (stub handler)
+    ffd4: jmp to 607e  (valid code - main IRQ?)
+    ffd8: jmp to 608c  (stub handler)
+    ffdc: jmp to 609a  (stub handler)
+    ffe0: jmp to 60a8  (stub handler)
+    ffe4: jmp to 60b6  (stub handler)
+    ffe8: jmp to 60c4  (stub handler)
+    ffec: jmp to 60d2  (stub handler)
 
-	fffa: e0 60 (60e0 vector) (stub handler)
-	fffc: 88 e1 (e188 startup vector)
-	fffe: 02 e0 (e002 vector)
+    fff0: 7d
+
+    fffa: e0 60 (60e0 vector) (stub handler)
+    fffc: 88 e1 (e188 startup vector)
+    fffe: 02 e0 (e002 vector)
 
 
-	-----------------------
-	
-	GOLDEN TEE HOME
+    -----------------------
 
-	ffb0  rti
-	ffb4  rti
-	ffb8  rti
-	ffbc  rti
+    GOLDEN TEE HOME
 
-	ffc0  rti
-	ffc4  rti
-	ffc8  rti
-	ffcc  rti
+    ffb0  rti
+    ffb4  rti
+    ffb8  rti
+    ffbc  rti
 
-	ffd0  rti
-	ffd4  main irq?
-	ffd8  rti
-	ffdc  rti
+    ffc0  rti
+    ffc4  rti
+    ffc8  rti
+    ffcc  rti
 
-	ffe0  something with 5045 bit 0x08 and 9d in ram (increase or decrease)  (ADC interrupt)
-	ffe4  something with 5045 bit 0x20 and 9c in ram (increase of decrease)  (ADC interrupt)
+    ffd0  rti
+    ffd4  main irq?
+    ffd8  rti
+    ffdc  rti
 
-	ffe8  rti
-	ffec  rti
+    ffe0  something with 5045 bit 0x08 and 9d in ram (increase or decrease)  (ADC interrupt)
+    ffe4  something with 5045 bit 0x20 and 9c in ram (increase of decrease)  (ADC interrupt)
 
-	regular NMI (e3f0 - jump to ($19e2) which seems to point to rti, but could move..)
-	regular IRQ (e3f3 - points to rti)
+    ffe8  rti
+    ffec  rti
+
+    regular NMI (e3f0 - jump to ($19e2) which seems to point to rti, but could move..)
+    regular IRQ (e3f3 - points to rti)
 
 */
 
@@ -174,7 +174,8 @@ elan_eu3a05commonsys_device::elan_eu3a05commonsys_device(const machine_config &m
 	m_cpu(*this, finder_base::DUMMY_TAG),
 	m_bank(*this, finder_base::DUMMY_TAG),
 	m_is_pal(false),
-	m_allow_timer_irq(true)
+	m_allow_timer_irq(true),
+	m_whichtimer(0)
 {
 }
 
@@ -236,7 +237,7 @@ void elan_eu3a05commonsys_device::device_timer(emu_timer &timer, device_timer_id
 			// rad_bb3 unmasks the interrupt, but the jumps use pointers in RAM, which haven't been set up at the time
 			// of unmasking, so we need to find some kind of global enable / disable, or timer enable.
 			if (m_allow_timer_irq)
-				generate_custom_interrupt(0);
+				generate_custom_interrupt(m_whichtimer);
 			break;
 		}
 	}
@@ -246,12 +247,12 @@ void elan_eu3a05commonsys_device::device_timer(emu_timer &timer, device_timer_id
 void elan_eu3a05commonsys_device::device_start()
 {
 	save_item(NAME(m_rombank_lo));
-	save_item(NAME(m_rombank_hi)); 
-	save_item(NAME(m_intmask)); 
-	save_item(NAME(m_custom_irq)); 
-	save_item(NAME(m_custom_nmi)); 
-	save_item(NAME(m_custom_irq_vector)); 
-	save_item(NAME(m_custom_nmi_vector)); 
+	save_item(NAME(m_rombank_hi));
+	save_item(NAME(m_intmask));
+	save_item(NAME(m_custom_irq));
+	save_item(NAME(m_custom_nmi));
+	save_item(NAME(m_custom_irq_vector));
+	save_item(NAME(m_custom_nmi_vector));
 
 	m_unk_timer = timer_alloc(TIMER_UNK);
 	m_unk_timer->adjust(attotime::never);
@@ -277,12 +278,12 @@ void elan_eu3a05commonsys_device::device_reset()
 	m_unk_timer->adjust(attotime::from_hz(4096), 0, attotime::from_hz(2048));
 }
 
-READ8_MEMBER(elan_eu3a05commonsys_device::intmask_r)
+uint8_t elan_eu3a05commonsys_device::intmask_r(offs_t offset)
 {
 	return m_intmask[offset];
 }
 
-WRITE8_MEMBER(elan_eu3a05commonsys_device::intmask_w)
+void elan_eu3a05commonsys_device::intmask_w(offs_t offset, uint8_t data)
 {
 	m_intmask[offset] = data;
 }
@@ -291,10 +292,10 @@ WRITE8_MEMBER(elan_eu3a05commonsys_device::intmask_w)
 void elan_eu3a05commonsys_device::generate_custom_interrupt(int level)
 {
 	// Air Blaster uses brk in the code, which is problematic for custom IRQs
-	//	m_custom_irq = 1;
-	//	m_custom_irq_vector = 0xffd4;
-	//	m_maincpu->set_input_line(INPUT_LINE_IRQ0,HOLD_LINE);
-	
+	//  m_custom_irq = 1;
+	//  m_custom_irq_vector = 0xffd4;
+	//  m_maincpu->set_input_line(INPUT_LINE_IRQ0,HOLD_LINE);
+
 	// 5007        5008
 	// --ee --v-   ssss ss-t
 	//   10        5432 10
@@ -318,7 +319,7 @@ void elan_eu3a05commonsys_device::generate_custom_interrupt(int level)
 	}
 }
 
-READ8_MEMBER(elan_eu3a05commonsys_device::nmi_vector_r)
+uint8_t elan_eu3a05commonsys_device::nmi_vector_r(offs_t offset)
 {
 	if (m_custom_nmi)
 	{
@@ -334,7 +335,7 @@ READ8_MEMBER(elan_eu3a05commonsys_device::nmi_vector_r)
 }
 
 // not currently used
-READ8_MEMBER(elan_eu3a05commonsys_device::irq_vector_r)
+uint8_t elan_eu3a05commonsys_device::irq_vector_r(offs_t offset)
 {
 	if(machine().side_effects_disabled())
 		return 0x00;
@@ -353,7 +354,7 @@ READ8_MEMBER(elan_eu3a05commonsys_device::irq_vector_r)
 }
 
 
-WRITE8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_rombank_w)
+void elan_eu3a05commonsys_device::elan_eu3a05_rombank_w(offs_t offset, uint8_t data)
 {
 	if (offset == 0x00)
 	{
@@ -370,7 +371,7 @@ WRITE8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_rombank_w)
 	}
 }
 
-READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_rombank_r)
+uint8_t elan_eu3a05commonsys_device::elan_eu3a05_rombank_r(offs_t offset)
 {
 	if (offset == 0x00)
 	{
@@ -383,7 +384,7 @@ READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_rombank_r)
 }
 
 
-READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_pal_ntsc_r)
+uint8_t elan_eu3a05commonsys_device::elan_eu3a05_pal_ntsc_r()
 {
 	// the text under the radica logo differs between regions, sometimes the titles too
 	logerror("%s: elan_eu3a05_pal_ntsc_r (region + more?)\n", machine().describe_context());
@@ -391,7 +392,7 @@ READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_pal_ntsc_r)
 	else return 0x00; // PAL
 }
 
-READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_5003_r)
+uint8_t elan_eu3a05commonsys_device::elan_eu3a05_5003_r()
 {
 	/* masked with 0x0f, 0x01 or 0x03 depending on situation..
 
@@ -410,7 +411,7 @@ READ8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_5003_r)
 
 
 
-WRITE8_MEMBER(elan_eu3a05commonsys_device::elan_eu3a05_500b_unk_w)
+void elan_eu3a05commonsys_device::elan_eu3a05_500b_unk_w(uint8_t data)
 {
 	// this is the PAL / NTSC flag when read, so what are writes?
 	logerror("%s: elan_eu3a05_500b_unk_w %02x\n", machine().describe_context(), data);

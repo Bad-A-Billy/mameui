@@ -25,7 +25,7 @@
 /// \brief System supports INT128
 ///
 /// Set this to one if you want to use 128 bit int for ptime.
-/// This is about 5% slower on a kaby lake processor.
+/// This is about 10% slower on a skylake processor for pongf.
 ///
 #ifndef PHAS_INT128
 #define PHAS_INT128 (0)
@@ -81,9 +81,10 @@
 #define PALIGNAS_CACHELINE()    PALIGNAS(PALIGN_CACHELINE)
 #define PALIGNAS_VECTOROPT()    PALIGNAS(PALIGN_VECTOROPT)
 
-// Breaks mame build on windows due to -Wattribute
+// FIXME: Breaks mame build on windows due to -Wattribute
+//        also triggers -Wattribute on ARM
 // FIXME: no error on cross-compile - need further checks
-#if defined(_WIN32) && defined(__GNUC__)
+#if defined(__GNUC__) && (defined(_WIN32) || defined(__arm__) || defined(__ARMEL__))
 #define PALIGNAS(x)
 #else
 #define PALIGNAS(x) alignas(x)
@@ -131,6 +132,10 @@
 #if (PHAS_INT128)
 typedef __uint128_t UINT128;
 typedef __int128_t INT128;
+#endif
+
+#if (PUSE_FLOAT128)
+typedef __float128 FLOAT128;
 #endif
 
 //============================================================

@@ -2,7 +2,7 @@
 // copyright-holders:byuu, Anthony Kruize, Fabio Priuli
 /***************************************************************************
 
-  snes.c
+  snes.cpp
 
   Video file to handle emulation of the Nintendo Super NES.
 
@@ -233,7 +233,7 @@ void snes_ppu_device::device_start()
 		}
 	}
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < ARRAY_LENGTH(m_scanlines); i++)
 	{
 		save_item(NAME(m_scanlines[i].enable), i);
 		save_item(NAME(m_scanlines[i].clip), i);
@@ -243,33 +243,30 @@ void snes_ppu_device::device_start()
 		save_item(NAME(m_scanlines[i].blend_exception), i);
 	}
 
-	for (int i = 0; i < 6; i++)
-	{
-		save_item(NAME(m_layer[i].window1_enabled), i);
-		save_item(NAME(m_layer[i].window1_invert), i);
-		save_item(NAME(m_layer[i].window2_enabled), i);
-		save_item(NAME(m_layer[i].window2_invert), i);
-		save_item(NAME(m_layer[i].wlog_mask), i);
-		save_item(NAME(m_layer[i].color_math), i);
-		save_item(NAME(m_layer[i].charmap), i);
-		save_item(NAME(m_layer[i].tilemap), i);
-		save_item(NAME(m_layer[i].tilemap_size), i);
-		save_item(NAME(m_layer[i].tile_size), i);
-		save_item(NAME(m_layer[i].tile_mode), i);
-		save_item(NAME(m_layer[i].mosaic_enabled), i);
-		save_item(NAME(m_layer[i].main_window_enabled), i);
-		save_item(NAME(m_layer[i].sub_window_enabled), i);
-		save_item(NAME(m_layer[i].main_bg_enabled), i);
-		save_item(NAME(m_layer[i].sub_bg_enabled), i);
-		save_item(NAME(m_layer[i].hoffs), i);
-		save_item(NAME(m_layer[i].voffs), i);
-		save_item(NAME(m_layer[i].priority[0]), i);
-		save_item(NAME(m_layer[i].priority[1]), i);
-		save_item(NAME(m_layer[i].mosaic_counter), i);
-		save_item(NAME(m_layer[i].mosaic_offset), i);
+	save_item(STRUCT_MEMBER(m_layer, window1_enabled));
+	save_item(STRUCT_MEMBER(m_layer, window1_invert));
+	save_item(STRUCT_MEMBER(m_layer, window2_enabled));
+	save_item(STRUCT_MEMBER(m_layer, window2_invert));
+	save_item(STRUCT_MEMBER(m_layer, wlog_mask));
+	save_item(STRUCT_MEMBER(m_layer, color_math));
+	save_item(STRUCT_MEMBER(m_layer, charmap));
+	save_item(STRUCT_MEMBER(m_layer, tilemap));
+	save_item(STRUCT_MEMBER(m_layer, tilemap_size));
+	save_item(STRUCT_MEMBER(m_layer, tile_size));
+	save_item(STRUCT_MEMBER(m_layer, tile_mode));
+	save_item(STRUCT_MEMBER(m_layer, mosaic_enabled));
+	save_item(STRUCT_MEMBER(m_layer, main_window_enabled));
+	save_item(STRUCT_MEMBER(m_layer, sub_window_enabled));
+	save_item(STRUCT_MEMBER(m_layer, main_bg_enabled));
+	save_item(STRUCT_MEMBER(m_layer, sub_bg_enabled));
+	save_item(STRUCT_MEMBER(m_layer, hoffs));
+	save_item(STRUCT_MEMBER(m_layer, voffs));
+	save_item(STRUCT_MEMBER(m_layer, priority));
+	save_item(STRUCT_MEMBER(m_layer, mosaic_counter));
+	save_item(STRUCT_MEMBER(m_layer, mosaic_offset));
 
+	for (int i = 0; i < ARRAY_LENGTH(m_clipmasks); i++)
 		save_item(NAME(m_clipmasks[i]), i);
-	}
 
 	save_item(NAME(m_oam.address));
 	save_item(NAME(m_oam.base_address));
@@ -281,10 +278,7 @@ void snes_ppu_device::device_start()
 	save_item(NAME(m_oam.write_latch));
 	save_item(NAME(m_oam.data_latch));
 	save_item(NAME(m_oam.interlace));
-	save_item(NAME(m_oam.priority[0]));
-	save_item(NAME(m_oam.priority[1]));
-	save_item(NAME(m_oam.priority[2]));
-	save_item(NAME(m_oam.priority[3]));
+	save_item(NAME(m_oam.priority));
 
 	save_item(NAME(m_beam.latch_horz));
 	save_item(NAME(m_beam.latch_vert));
@@ -305,18 +299,15 @@ void snes_ppu_device::device_start()
 	save_item(NAME(m_mode7.ver_offset));
 	save_item(NAME(m_mode7.extbg));
 
-	for (int i = 0; i < ARRAY_LENGTH(m_objects); i++)
-	{
-		save_item(NAME(m_objects[i].x), i);
-		save_item(NAME(m_objects[i].y), i);
-		save_item(NAME(m_objects[i].character), i);
-		save_item(NAME(m_objects[i].name_select), i);
-		save_item(NAME(m_objects[i].vflip), i);
-		save_item(NAME(m_objects[i].hflip), i);
-		save_item(NAME(m_objects[i].pri), i);
-		save_item(NAME(m_objects[i].pal), i);
-		save_item(NAME(m_objects[i].size), i);
-	}
+	save_item(STRUCT_MEMBER(m_objects, x));
+	save_item(STRUCT_MEMBER(m_objects, y));
+	save_item(STRUCT_MEMBER(m_objects, character));
+	save_item(STRUCT_MEMBER(m_objects, name_select));
+	save_item(STRUCT_MEMBER(m_objects, vflip));
+	save_item(STRUCT_MEMBER(m_objects, hflip));
+	save_item(STRUCT_MEMBER(m_objects, pri));
+	save_item(STRUCT_MEMBER(m_objects, pal));
+	save_item(STRUCT_MEMBER(m_objects, size));
 
 	save_item(NAME(m_mosaic_size));
 	save_item(NAME(m_clip_to_black));
@@ -1490,7 +1481,7 @@ inline uint32_t snes_ppu_device::get_vram_address()
 	return addr << 1;
 }
 
-READ8_MEMBER( snes_ppu_device::vram_read )
+uint8_t snes_ppu_device::vram_read(offs_t offset)
 {
 	uint8_t res;
 	offset &= 0xffff; // only 64KB are present on SNES
@@ -1526,7 +1517,7 @@ READ8_MEMBER( snes_ppu_device::vram_read )
 	return res;
 }
 
-WRITE8_MEMBER( snes_ppu_device::vram_write )
+void snes_ppu_device::vram_write(offs_t offset, uint8_t data)
 {
 	offset &= 0xffff; // only 64KB are present on SNES, Robocop 3 relies on this
 
@@ -1541,7 +1532,7 @@ WRITE8_MEMBER( snes_ppu_device::vram_write )
 			if (h <= 4)
 				m_vram[offset] = data;
 			else if (h == 6)
-				m_vram[offset] = m_openbus_cb(space, 0);
+				m_vram[offset] = m_openbus_cb(0);
 			else
 			{
 				//printf("%d %d VRAM write, CHECK!\n",h,v);
@@ -1611,13 +1602,13 @@ uint8_t snes_ppu_device::read_object( uint16_t address )
 	{
 		uint8_t n = (address & 0x1f) << 2;
 		return (BIT(m_objects[n + 0].x, 8) << 0) |
-		       (BIT(m_objects[n + 1].x, 8) << 2) |
-		       (BIT(m_objects[n + 2].x, 8) << 4) |
-		       (BIT(m_objects[n + 3].x, 8) << 6) |
-		       (m_objects[n + 0].size << 1) |
-		       (m_objects[n + 1].size << 3) |
-		       (m_objects[n + 2].size << 5) |
-		       (m_objects[n + 3].size << 7);
+			   (BIT(m_objects[n + 1].x, 8) << 2) |
+			   (BIT(m_objects[n + 2].x, 8) << 4) |
+			   (BIT(m_objects[n + 3].x, 8) << 6) |
+			   (m_objects[n + 0].size << 1) |
+			   (m_objects[n + 1].size << 3) |
+			   (m_objects[n + 2].size << 5) |
+			   (m_objects[n + 3].size << 7);
 	}
 }
 
@@ -1682,7 +1673,7 @@ void snes_ppu_device::write_object( uint16_t address, uint8_t data )
  solution adopted by BSNES without enabling it.
 *************************************************/
 
-READ8_MEMBER( snes_ppu_device::cgram_read )
+uint8_t snes_ppu_device::cgram_read(offs_t offset)
 {
 	uint8_t res;
 	offset &= 0x1ff;
@@ -1708,7 +1699,7 @@ READ8_MEMBER( snes_ppu_device::cgram_read )
 	return res;
 }
 
-WRITE8_MEMBER( snes_ppu_device::cgram_write )
+void snes_ppu_device::cgram_write(offs_t offset, uint8_t data)
 {
 	offset &= 0x1ff;
 
@@ -1746,7 +1737,7 @@ uint16_t snes_ppu_device::direct_color(uint16_t palette, uint16_t group)
 
 void snes_ppu_device::set_current_vert(uint16_t value)
 {
-    m_beam.current_vert = value;
+	m_beam.current_vert = value;
 }
 
 void snes_ppu_device::cache_background()
@@ -1961,8 +1952,8 @@ uint8_t snes_ppu_device::read(address_space &space, uint32_t offset, uint8_t wri
 
 				if (!m_vram_fgr_high)
 				{
-					m_vram_read_buffer = vram_read(space, addr);
-					m_vram_read_buffer |= (vram_read(space, addr + 1) << 8);
+					m_vram_read_buffer = vram_read(addr);
+					m_vram_read_buffer |= (vram_read(addr + 1) << 8);
 
 					m_vmadd = (m_vmadd + m_vram_fgr_increment) & 0xffff;
 				}
@@ -1976,8 +1967,8 @@ uint8_t snes_ppu_device::read(address_space &space, uint32_t offset, uint8_t wri
 
 				if (m_vram_fgr_high)
 				{
-					m_vram_read_buffer = vram_read(space, addr);
-					m_vram_read_buffer |= (vram_read(space, addr + 1) << 8);
+					m_vram_read_buffer = vram_read(addr);
+					m_vram_read_buffer |= (vram_read(addr + 1) << 8);
 
 					m_vmadd = (m_vmadd + m_vram_fgr_increment) & 0xffff;
 				}
@@ -1986,11 +1977,11 @@ uint8_t snes_ppu_device::read(address_space &space, uint32_t offset, uint8_t wri
 			}
 		case RCGDATA:   /* Read data from CGRAM */
 			if (!(m_cgram_address & 0x01))
-				m_ppu2_open_bus = cgram_read(space, m_cgram_address);
+				m_ppu2_open_bus = cgram_read(m_cgram_address);
 			else
 			{
 				m_ppu2_open_bus &= 0x80;
-				m_ppu2_open_bus |= cgram_read(space, m_cgram_address) & 0x7f;
+				m_ppu2_open_bus |= cgram_read(m_cgram_address) & 0x7f;
 			}
 
 			m_cgram_address = (m_cgram_address + 1) % (SNES_CGRAM_SIZE - 2);
@@ -2186,8 +2177,8 @@ void snes_ppu_device::write(address_space &space, uint32_t offset, uint8_t data)
 				uint32_t addr;
 				m_vmadd = (m_vmadd & 0xff00) | (data << 0);
 				addr = get_vram_address();
-				m_vram_read_buffer = vram_read(space, addr);
-				m_vram_read_buffer |= (vram_read(space, addr + 1) << 8);
+				m_vram_read_buffer = vram_read(addr);
+				m_vram_read_buffer |= (vram_read(addr + 1) << 8);
 			}
 			break;
 		case VMADDH:    /* Address for VRAM read/write (high) */
@@ -2195,14 +2186,14 @@ void snes_ppu_device::write(address_space &space, uint32_t offset, uint8_t data)
 				uint32_t addr;
 				m_vmadd = (m_vmadd & 0x00ff) | (data << 8);
 				addr = get_vram_address();
-				m_vram_read_buffer = vram_read(space, addr);
-				m_vram_read_buffer |= (vram_read(space, addr + 1) << 8);
+				m_vram_read_buffer = vram_read(addr);
+				m_vram_read_buffer |= (vram_read(addr + 1) << 8);
 			}
 			break;
 		case VMDATAL:   /* 2118: Data for VRAM write (low) */
 			{
 				uint32_t addr = get_vram_address();
-				vram_write(space, addr, data);
+				vram_write(addr, data);
 
 				if (!m_vram_fgr_high)
 					m_vmadd = (m_vmadd + m_vram_fgr_increment) & 0xffff;
@@ -2211,7 +2202,7 @@ void snes_ppu_device::write(address_space &space, uint32_t offset, uint8_t data)
 		case VMDATAH:   /* 2119: Data for VRAM write (high) */
 			{
 				uint32_t addr = get_vram_address();
-				vram_write(space, addr + 1, data);
+				vram_write(addr + 1, data);
 
 				if (m_vram_fgr_high)
 					m_vmadd = (m_vmadd + m_vram_fgr_increment) & 0xffff;
@@ -2252,7 +2243,7 @@ void snes_ppu_device::write(address_space &space, uint32_t offset, uint8_t data)
 			m_cgram_address = data << 1;
 			break;
 		case CGDATA:    /* Data for colour RAM */
-			cgram_write(space, m_cgram_address, data);
+			cgram_write(m_cgram_address, data);
 			m_cgram_address = (m_cgram_address + 1) % (SNES_CGRAM_SIZE - 2);
 			break;
 		case W12SEL:    /* Window mask settings for BG1-2 */

@@ -13,9 +13,9 @@
 namespace netlist
 {
 
-	static constexpr const char sHINT_NO_DEACTIVATE[] = ".HINT_NO_DEACTIVATE";
-	static constexpr const char sPowerGND[] = "GND";
-	static constexpr const char sPowerVCC[] = "VCC";
+	static constexpr const char sHINT_NO_DEACTIVATE[] = ".HINT_NO_DEACTIVATE"; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+	static constexpr const char sPowerGND[] = "GND"; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+	static constexpr const char sPowerVCC[] = "VCC"; // NOLINT(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 
 	// nl_base.cpp
 
@@ -44,11 +44,11 @@ namespace netlist
 	PERRMSGV(MF_UNEXPECTED_NETLIST_END,             0, "Unexpected NETLIST_END")
 	PERRMSGV(MF_UNEXPECTED_END_OF_FILE,             0, "Unexpected end of file, missing NETLIST_END")
 	PERRMSGV(MF_UNEXPECTED_NETLIST_START,           0, "Unexpected NETLIST_START")
-	PERRMSGV(MF_EXPECTED_IDENTIFIER_GOT_1,			1, "Expected an identifier, but got {1}")
-	PERRMSGV(MF_EXPECTED_COMMA_OR_RP_1,				1, "Expected comma or right parenthesis but found <{1}>")
-	PERRMSGV(MF_DIPPINS_EQUAL_NUMBER_1,				1, "DIPPINS requires equal number of pins to DIPPINS, first pin is {}")
-	PERRMSGV(MF_PARAM_NOT_FP_1,						1, "Parameter value <{1}> not floating point")
-	PERRMSGV(MF_TT_LINE_WITHOUT_HEAD,				0, "TT_LINE found without TT_HEAD")
+	PERRMSGV(MF_EXPECTED_IDENTIFIER_GOT_1,          1, "Expected an identifier, but got {1}")
+	PERRMSGV(MF_EXPECTED_COMMA_OR_RP_1,             1, "Expected comma or right parenthesis but found <{1}>")
+	PERRMSGV(MF_DIPPINS_EQUAL_NUMBER_1,             1, "DIPPINS requires equal number of pins to DIPPINS, first pin is {}")
+	PERRMSGV(MF_PARAM_NOT_FP_1,                     1, "Parameter value <{1}> not floating point")
+	PERRMSGV(MF_TT_LINE_WITHOUT_HEAD,               0, "TT_LINE found without TT_HEAD")
 
 	// nl_setup.cpp
 
@@ -118,6 +118,7 @@ namespace netlist
 	// nld_solver.cpp
 
 	PERRMSGV(MI_NO_SPECIFIC_SOLVER,                 1, "No specific solver found for netlist of size {1}")
+	PERRMSGV(MW_SOLVER_METHOD_NOT_SUPPORTED,        2, "Solver method {1} not supported. Falling back to {2}")
 
 	// nld_mm5837.cpp
 

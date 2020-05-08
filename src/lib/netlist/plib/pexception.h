@@ -13,10 +13,10 @@
 
 #include <exception>
 
-#define passert_always(expr)							\
+#define passert_always(expr)                            \
   ((expr) ? static_cast<void>(0) : plib::passert_fail (#expr, __FILE__, __LINE__, nullptr))
 
-#define passert_always_msg(expr, msg)							\
+#define passert_always_msg(expr, msg)                           \
   ((expr) ? static_cast<void>(0) : plib::passert_fail (#expr, __FILE__, __LINE__, msg))
 
 namespace plib {
@@ -29,19 +29,6 @@ namespace plib {
 
 	[[noreturn]] void passert_fail(const char *assertion,
 		const char *file, int lineno, const char *msg) noexcept;
-
-	/// \brief throw an exception.
-	///
-	/// throws an exception E. The purpose is to clearly identify exception
-	/// throwing in the code
-	///
-	/// \tparam E Type of exception to be thrown
-	///
-	template<typename E, typename... Args>
-	[[noreturn]] static inline void pthrow(Args&&... args) noexcept(false)
-	{
-		throw E(std::forward<Args>(args)...);
-	}
 
 	//============================================================
 	//  exception base
@@ -119,7 +106,7 @@ namespace plib {
 	public:
 		explicit fpsignalenabler(unsigned fpexceptions);
 
-		COPYASSIGNMOVE(fpsignalenabler, delete)
+		PCOPYASSIGNMOVE(fpsignalenabler, delete)
 
 		~fpsignalenabler();
 

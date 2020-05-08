@@ -2,81 +2,81 @@
 // copyright-holders:Nigel Barnes
 /*********************************************************************
 
-	Romantic Robot Multiface One/128/3
-	----------------------------------
-	
-	" MULTI-PURPOSE INTERFACE FOR THE ZX SPECTRUM "
-	
-	MULTIFACE ONE comprises three interfaces in one box:
-	1) Fully  universal  and  100%  automatic  SAVE  facility  for  tape,  microdrive,  wafadrive,  Beta,
-	   Discovery and indirectly (via tape) for other disc systems
-	2) Joystick interface – Kempston compatible (IN 31)
-	3) 8K  RAM  extension  –  fully  accessible,  usable  as a  RAM  disk,  buffer  etc.  Also  used  by
-	   MULTIFACE for MULTI TOOLKIT routines, buffer & other purposes.
-	   
-	© Romantic Robot UK Ltd 1985 
-	
-	
-	Multiface One
-	-------------
-	Many versions exist, a very good source of info is:  https://x128.speccy.cz/multiface/multiface.htm
-	
-	Summary:
-	Earliest version has 2KB of RAM, composite video output, and no toolkit (pokes only).
-	Next version has 8KB of RAM, composite video output, and basic toolkit (including pokes).
-	Latest and most common version dropped the composite video output, added an enable/disable switch, and full-featured toolkit.
-	A special (and rare) version supports the Kempston Disc interface but drops Beta support. (not sold in stores, available only on request).
-	At some point during "early" revisions, the page out port changed from 0x5f to 0x1f.
-	Various clone/hacked rom versions are known to exist as well.
+    Romantic Robot Multiface One/128/3
+    ----------------------------------
 
-	Roms:
-	The MUxx in the rom name is pcb revision (silkscreen marking).
-	The two hex digits are the rom checksum.
-	With the MF menu on-screen, press Symbol Shift + A (STOP) to see checksum, space to return.
-	
-	The enable/disable switch became necessary on later versions as games had started including checks to detect presence of the interface.
-	eg. Renegade ("The Hit Squad" re-release) whilst loading, reads from 0x9f specifically to cause the MF (if present) to page in and crash the machine.
-	Todo: confirm exact operation of disable switch.
-	
-	As mentioned in the user instructions, there is a "joystick disable" jumper inside the unit which must be cut to allow Beta disk compatibility.
-	The joystick is not actually disabled but rather just data bus bits D6 + D7 are held hi-z for any reads of kempston range 0b000xxxxx.
-	
-	rom maps to 0x0000
-	ram maps to 0x2000
-	
-	I/O        R/W   early ver   late ver
-	---------+-----+-----------+-----------
-	page in     R      0x9f        0x9f
-	page out    R      0x5f        0x1f
-	nmi reset   W      0x5f        0x1f
-	joystick    R      0x1f        0x1f
-	
-	
-	Multiface 128
-	-------------
-	128K/+2 support (also works with 48K)
-	DISCiPLE/Plus D disc support
-	No joystick port
-	Software enable/disable
-	"Hypertape" recording (?)
-	
-	Todo ...
-	
-	
-	Multiface 3
-	-----------
-	+2A/+2B/+3/3B support (doesn't work with 48K/128K/+2)
-	+3 disk support
-	
-	Todo ...
-	
-	
-	Multiprint
-	----------
-	Version ? multiface with Centronics printer interface
-	
-	Todo ...
-	
+    " MULTI-PURPOSE INTERFACE FOR THE ZX SPECTRUM "
+
+    MULTIFACE ONE comprises three interfaces in one box:
+    1) Fully  universal  and  100%  automatic  SAVE  facility  for  tape,  microdrive,  wafadrive,  Beta,
+       Discovery and indirectly (via tape) for other disc systems
+    2) Joystick interface – Kempston compatible (IN 31)
+    3) 8K  RAM  extension  –  fully  accessible,  usable  as a  RAM  disk,  buffer  etc.  Also  used  by
+       MULTIFACE for MULTI TOOLKIT routines, buffer & other purposes.
+
+    © Romantic Robot UK Ltd 1985
+
+
+    Multiface One
+    -------------
+    Many versions exist, a very good source of info is:  https://x128.speccy.cz/multiface/multiface.htm
+
+    Summary:
+    Earliest version has 2KB of RAM, composite video output, and no toolkit (pokes only).
+    Next version has 8KB of RAM, composite video output, and basic toolkit (including pokes).
+    Latest and most common version dropped the composite video output, added an enable/disable switch, and full-featured toolkit.
+    A special (and rare) version supports the Kempston Disc interface but drops Beta support. (not sold in stores, available only on request).
+    At some point during "early" revisions, the page out port changed from 0x5f to 0x1f.
+    Various clone/hacked rom versions are known to exist as well.
+
+    Roms:
+    The MUxx in the rom name is pcb revision (silkscreen marking).
+    The two hex digits are the rom checksum.
+    With the MF menu on-screen, press Symbol Shift + A (STOP) to see checksum, space to return.
+
+    The enable/disable switch became necessary on later versions as games had started including checks to detect presence of the interface.
+    eg. Renegade ("The Hit Squad" re-release) whilst loading, reads from 0x9f specifically to cause the MF (if present) to page in and crash the machine.
+    Todo: confirm exact operation of disable switch.
+
+    As mentioned in the user instructions, there is a "joystick disable" jumper inside the unit which must be cut to allow Beta disk compatibility.
+    The joystick is not actually disabled but rather just data bus bits D6 + D7 are held hi-z for any reads of kempston range 0b000xxxxx.
+
+    rom maps to 0x0000
+    ram maps to 0x2000
+
+    I/O        R/W   early ver   late ver
+    ---------+-----+-----------+-----------
+    page in     R      0x9f        0x9f
+    page out    R      0x5f        0x1f
+    nmi reset   W      0x5f        0x1f
+    joystick    R      0x1f        0x1f
+
+
+    Multiface 128
+    -------------
+    128K/+2 support (also works with 48K)
+    DISCiPLE/Plus D disc support
+    No joystick port
+    Software enable/disable
+    "Hypertape" recording (?)
+
+    Todo ...
+
+
+    Multiface 3
+    -----------
+    +2A/+2B/+3/3B support (doesn't work with 48K/128K/+2)
+    +3 disk support
+
+    Todo ...
+
+
+    Multiprint
+    ----------
+    Version ? multiface with Centronics printer interface
+
+    Todo ...
+
 
 *********************************************************************/
 
@@ -105,13 +105,13 @@ INPUT_PORTS_END
 
 INPUT_PORTS_START( mface1 )
 	PORT_INCLUDE( mface )
-	
+
 	PORT_START("CONFIG")
 	PORT_CONFNAME(0x01, 0x00, "Joystick Enable Jumper")
 	PORT_CONFSETTING(0x00, "Closed")
 	PORT_CONFSETTING(0x01, "Open")
 	PORT_BIT(0xfe, IP_ACTIVE_LOW, IPT_UNUSED)
-	
+
 	PORT_START("JOY")
 	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT) PORT_8WAY
 	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT)  PORT_8WAY
@@ -149,21 +149,23 @@ ROM_START(mface1)
 	ROMX_LOAD("mf1_21_e4.rom", 0x0000, 0x2000, CRC(4b31a971) SHA1(ba28754a3cc31a4ca579829ed4310c313409cf5d), ROM_BIOS(2))
 	ROM_SYSTEM_BIOS(3, "mu21e7", "MU 2.1 E7")  // last known version?
 	ROMX_LOAD("mf1_21_e7.rom", 0x0000, 0x2000, CRC(670f0ec2) SHA1(50fba2d628f3a2e9219f72980e4efd62fc9ec1f8), ROM_BIOS(3))
+	ROM_SYSTEM_BIOS(4, "bc96", "Brazilian clone 96")  // Brazilian clone, unknown pcb version
+	ROMX_LOAD("mf1_bc_96.rom", 0x0000, 0x2000, CRC(e6fe4507) SHA1(a7e03e7fee3aa05ce1501072aab4534ea7bae257), ROM_BIOS(4))
 ROM_END
 
 /* Todo ...
 
-	ROM_SYSTEM_BIOS(?, "mu12cb", "MU12 CB")  // Very early version, 2KB RAM, page out port 0x5F
-	ROMX_LOAD("mf1_12_cb.rom", 0x0000, 0x2000, CRC(c88fbf9f) SHA1(c3018d1b495b8bc0a135038db0987de7091c9d4c), ROM_BIOS(?))
+    ROM_SYSTEM_BIOS(?, "mu12cb", "MU12 CB")  // Very early version, 2KB RAM, page out port 0x5F
+    ROMX_LOAD("mf1_12_cb.rom", 0x0000, 0x2000, CRC(c88fbf9f) SHA1(c3018d1b495b8bc0a135038db0987de7091c9d4c), ROM_BIOS(?))
 
-	ROM_SYSTEM_BIOS(?, "mu2023", "MU 2.0 23")  // pokes only (no toolkit), page out port 0x5F
-	ROMX_LOAD("mf1_20_23.rom", 0x0000, 0x2000, CRC(d4ae8953) SHA1(b442eb634a72fb63f1ccbbd0021a7a581152888d), ROM_BIOS(?))
+    ROM_SYSTEM_BIOS(?, "mu2023", "MU 2.0 23")  // pokes only (no toolkit), page out port 0x5F
+    ROMX_LOAD("mf1_20_23.rom", 0x0000, 0x2000, CRC(d4ae8953) SHA1(b442eb634a72fb63f1ccbbd0021a7a581152888d), ROM_BIOS(?))
 
-	ROM_SYSTEM_BIOS(?, "mu2090", "MU 2.0, 90")  // pokes only or full toolkit?       NO DUMP?
-	ROMX_LOAD("mf1_20_90.rom", 0x0000, 0x2000, CRC(2eaf8e41) SHA1(?), ROM_BIOS(?))
+    ROM_SYSTEM_BIOS(?, "mu2090", "MU 2.0, 90")  // pokes only or full toolkit?       NO DUMP?
+    ROMX_LOAD("mf1_20_90.rom", 0x0000, 0x2000, CRC(2eaf8e41) SHA1(?), ROM_BIOS(?))
 
-	ROM_SYSTEM_BIOS(?, "v24", "MU ?? 93 (Brazilian clone)")  //                      NO DUMP?
-	ROMX_LOAD("mf1_bc_fe.rom", 0x0000, 0x2000, CRC(8c17113b) SHA1(?), ROM_BIOS(?))
+    ROM_SYSTEM_BIOS(?, "bc93", "Brazilian clone 93")  //                             NO DUMP?
+    ROMX_LOAD("mf1_bc_93.rom", 0x0000, 0x2000, CRC(8c17113b) SHA1(?), ROM_BIOS(?))
 */
 
 ROM_START(mface128)
@@ -304,7 +306,7 @@ void spectrum_mface_base_device::pre_opcode_fetch(offs_t offset)
 uint8_t spectrum_mface1_device::iorq_r(offs_t offset)
 {
 	uint8_t data = m_exp->iorq_r(offset);
-	
+
 	if (!machine().side_effects_disabled())
 	{
 		switch (offset & 0xff)
@@ -392,7 +394,7 @@ void spectrum_mface1_device::iorq_w(offs_t offset, uint8_t data)
 		m_slot->nmi_w(CLEAR_LINE);
 		break;
 	}
-	
+
 	m_exp->iorq_w(offset, data);
 }
 
@@ -451,7 +453,7 @@ INPUT_CHANGED_MEMBER(spectrum_mface1_device::magic_button)
 {
 	if (newval && !oldval)  // key released
 	{
-		
+
 	}
 	else  // key pressed
 	{

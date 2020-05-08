@@ -165,7 +165,6 @@ public:
 	void set_input_line_and_vector(int linenum, int state, int vector) { m_input[linenum].set_state_synced(state, vector); }
 	int input_state(int linenum) const { return m_input[linenum].m_curstate; }
 	void pulse_input_line(int irqline, const attotime &duration);
-	void pulse_input_line_and_vector(int irqline, int vector, const attotime &duration);
 
 	// suspend/resume
 	void suspend(u32 reason, bool eatcycles);
@@ -247,12 +246,12 @@ private:
 	// internal information about the state of inputs
 	class device_input
 	{
-		static const int USE_STORED_VECTOR = 0xff000000;
+		static constexpr int USE_STORED_VECTOR = 0xff000000;
 
 	public:
 		device_input();
 
-		void start(device_execute_interface *execute, int linenum);
+		void start(device_execute_interface &execute, int linenum);
 		void reset();
 
 		void set_state_synced(int state, int vector = USE_STORED_VECTOR);

@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles
 /***************************************************************************
 
-    screen.c
+    screen.cpp
 
     Core MAME screen device.
 
@@ -597,7 +597,7 @@ screen_device::screen_device(const machine_config &mconfig, const char *tag, dev
 
 screen_device::~screen_device()
 {
-    destroy_scan_bitmaps();
+	destroy_scan_bitmaps();
 }
 
 
@@ -608,21 +608,21 @@ screen_device::~screen_device()
 
 void screen_device::destroy_scan_bitmaps()
 {
-    if (m_video_attributes & VIDEO_VARIABLE_WIDTH)
-    {
-        const bool screen16 = !m_screen_update_ind16.isnull();
-        for (int j = 0; j < 2; j++)
-        {
-            for (bitmap_t* bitmap : m_scan_bitmaps[j])
-            {
-                if (screen16)
-                    delete (bitmap_ind16*)bitmap;
-                else
-                    delete (bitmap_rgb32*)bitmap;
-            }
-            m_scan_bitmaps[j].clear();
-        }
-    }
+	if (m_video_attributes & VIDEO_VARIABLE_WIDTH)
+	{
+		const bool screen16 = !m_screen_update_ind16.isnull();
+		for (int j = 0; j < 2; j++)
+		{
+			for (bitmap_t* bitmap : m_scan_bitmaps[j])
+			{
+				if (screen16)
+					delete (bitmap_ind16*)bitmap;
+				else
+					delete (bitmap_rgb32*)bitmap;
+			}
+			m_scan_bitmaps[j].clear();
+		}
+	}
 }
 
 
@@ -633,14 +633,14 @@ void screen_device::destroy_scan_bitmaps()
 
 void screen_device::allocate_scan_bitmaps()
 {
-    if (m_video_attributes & VIDEO_VARIABLE_WIDTH)
-    {
-        const bool screen16 = !m_screen_update_ind16.isnull();
-        s32 effwidth = std::max(m_max_width, m_visarea.right() + 1);
-        const s32 old_height = (s32)m_scan_widths.size();
-        s32 effheight = std::max(m_height, m_visarea.bottom() + 1);
-        if (old_height < effheight)
-        {
+	if (m_video_attributes & VIDEO_VARIABLE_WIDTH)
+	{
+		const bool screen16 = !m_screen_update_ind16.isnull();
+		s32 effwidth = std::max(m_max_width, m_visarea.right() + 1);
+		const s32 old_height = (s32)m_scan_widths.size();
+		s32 effheight = std::max(m_height, m_visarea.bottom() + 1);
+		if (old_height < effheight)
+		{
 			for (int i = old_height; i < effheight; i++)
 			{
 				for (int j = 0; j < 2; j++)
@@ -668,7 +668,7 @@ void screen_device::allocate_scan_bitmaps()
 				m_scan_widths.erase(m_scan_widths.begin() + i);
 			}
 		}
-    }
+	}
 }
 
 //-------------------------------------------------
@@ -1021,8 +1021,7 @@ void screen_device::configure(int width, int height, const rectangle &visarea, a
 	m_visarea = visarea;
 
 	// reallocate bitmap(s) if necessary
-    realloc_screen_bitmaps();
-    if (machine().input().code_pressed(KEYCODE_E)) printf("CONFIGURE\n");
+	realloc_screen_bitmaps();
 
 	// compute timing parameters
 	m_frame_period = frame_period;
@@ -1094,8 +1093,8 @@ void screen_device::reset_origin(int beamy, int beamx)
 
 void screen_device::update_scan_bitmap_size(int y)
 {
-    // don't update this line if it exceeds the allocated size, which can happen on initial configuration
-    if (y >= m_scan_widths.size())
+	// don't update this line if it exceeds the allocated size, which can happen on initial configuration
+	if (y >= m_scan_widths.size())
 		return;
 
 	// determine effective size to allocate
@@ -1138,7 +1137,7 @@ void screen_device::realloc_screen_bitmaps()
 	m_texture[0]->set_bitmap(m_bitmap[0], m_visarea, m_bitmap[0].texformat());
 	m_texture[1]->set_bitmap(m_bitmap[1], m_visarea, m_bitmap[1].texformat());
 
-    allocate_scan_bitmaps();
+	allocate_scan_bitmaps();
 }
 
 
@@ -1727,6 +1726,7 @@ void screen_device::create_composited_bitmap()
 					*dst++ = src[x >> 15];
 				}
 			}
+			break;
 		}
 
 		case BITMAP_FORMAT_RGB32:
@@ -1795,7 +1795,8 @@ bool screen_device::update_quads()
 
 void screen_device::update_burnin()
 {
-// TODO: other than being unnecessary (we should use our rand function first off), this is a simplification of how analog signals really works!
+// TODO: other than being unnecessary, this is a simplification of how analog signals really works!
+// It's important not to use machine().rand() here, it can cause machine().rand() used in emulation to desync.
 #undef rand
 	if (!m_burnin.valid())
 		return;
@@ -1913,17 +1914,14 @@ void screen_device::finalize_burnin()
 
 	// compute the name and create the file
 	emu_file file(machine().options().snapshot_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	osd_file::error filerr = file.open(machine().basename(), PATH_SEPARATOR "burnin-", this->tag()+1, ".png") ;
+	osd_file::error filerr = file.open(util::string_format("%s" PATH_SEPARATOR "burnin-%s.png", machine().basename(), tag() + 1));
 	if (filerr == osd_file::error::NONE)
 	{
 		png_info pnginfo;
-		char text[256];
 
 		// add two text entries describing the image
-		sprintf(text,"%s %s", emulator_info::get_appname(), emulator_info::get_build_version());
-		pnginfo.add_text("Software", text);
-		sprintf(text, "%s %s", machine().system().manufacturer, machine().system().type.fullname());
-		pnginfo.add_text("System", text);
+		pnginfo.add_text("Software", util::string_format("%s %s", emulator_info::get_appname(), emulator_info::get_build_version()).c_str());
+		pnginfo.add_text("System", util::string_format("%s %s", machine().system().manufacturer, machine().system().type.fullname()).c_str());
 
 		// now do the actual work
 		png_write_bitmap(file, &pnginfo, finalmap, 0, nullptr);

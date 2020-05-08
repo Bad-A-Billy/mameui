@@ -2434,7 +2434,7 @@ static void BuildDataMap(void)
 	datamap_set_trackbar_range(properties_datamap, IDC_VOLUME,      -32,  0, 1);
 	datamap_set_trackbar_range(properties_datamap, IDC_SECONDSTORUN, 0,  60, 1);
 	datamap_set_trackbar_range(properties_datamap, IDC_NUMSCREENS, 1,  4, 1);
-	datamap_set_trackbar_range(properties_datamap, IDC_PRESCALE, 1,  3, 1);
+	datamap_set_trackbar_range(properties_datamap, IDC_PRESCALE, 1, 8, 1);
 	datamap_set_trackbar_range(properties_datamap, IDC_FSGAMMA, 0.0, 3.0, (float)0.1);
 	datamap_set_trackbar_range(properties_datamap, IDC_FSBRIGHTNESS, 0.00,  2.0, (float)0.1);
 	datamap_set_trackbar_range(properties_datamap, IDC_FSCONTRAST, 0.0,  2.0, (float)0.1);
@@ -2763,7 +2763,7 @@ static void InitializeBIOSUI(HWND hwnd)
 			res = ComboBox_SetItemData( hCtrl, i++, "");
 			return;
 		}
-		if (g_nGame == LOCAL_OPTIONS) //Folder Options: This is the only place that LOCAL_OPTIONS is used, is this code ever executed?
+		if (g_nGame == LOCAL_OPTIONS) //Folder Options: This is the only place that LOCAL_OPTIONS is used.
 		{
 			gamedrv = &driver_list::driver(g_nFolderGame);
 			if (DriverHasOptionalBIOS(g_nFolderGame) == false)
@@ -2773,7 +2773,7 @@ static void InitializeBIOSUI(HWND hwnd)
 				return;
 			}
 			res = ComboBox_InsertString(hCtrl, i, TEXT("Default"));
-			res = ComboBox_SetItemData( hCtrl, i++, "");
+			res = ComboBox_SetItemData( hCtrl, i++, "default");
 
 			if (gamedrv->rom)
 			{
@@ -2790,6 +2790,8 @@ static void InitializeBIOSUI(HWND hwnd)
 						res = ComboBox_InsertString(hCtrl, i, win_tstring_strdup(t_s));
 						res = ComboBox_SetItemData( hCtrl, i++, biosname);
 						free(t_s);
+						if (ROMENTRY_ISDEFAULT_BIOS(rom))
+							res = ComboBox_SetItemData( hCtrl, 0, biosname);
 					}
 				}
 			}

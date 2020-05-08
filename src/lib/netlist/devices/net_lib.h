@@ -14,10 +14,6 @@
 
 //#define NL_AUTO_DEVICES 1
 
-#ifdef NL_AUTO_DEVICES
-#include "nld_devinc.h"
-
-// FIXME: copied from nld_twoterm.h
 #ifdef RES_R
 #warning "Do not include rescap.h in a netlist environment"
 #endif
@@ -33,6 +29,9 @@
 #define IND_P(ind) ((ind) * 1e-12)
 #endif
 
+#ifdef NL_AUTO_DEVICES
+#include "nld_devinc.h"
+
 #include "netlist/macro/nlm_cd4xxx.h"
 #include "netlist/macro/nlm_opamp.h"
 #include "netlist/macro/nlm_other.h"
@@ -43,13 +42,13 @@
 #else
 
 #define SOLVER(name, freq)                                                  \
-		NET_REGISTER_DEV(SOLVER, name)                                      \
-		PARAM(name.FREQ, freq)
+		NET_REGISTER_DEVEXT(SOLVER, name, freq)
 
 #include "nld_system.h"
 
 #include "nld_2102A.h"
 #include "nld_2716.h"
+#include "nld_4006.h"
 #include "nld_4020.h"
 #include "nld_4066.h"
 #include "nld_74107.h"

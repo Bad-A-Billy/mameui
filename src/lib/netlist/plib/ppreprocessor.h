@@ -44,7 +44,7 @@ namespace plib {
 
 		explicit ppreprocessor(psource_collection_t<> &sources, defines_map_type *defines = nullptr);
 
-		COPYASSIGN(ppreprocessor, delete)
+		PCOPYASSIGN(ppreprocessor, delete)
 		ppreprocessor &operator=(ppreprocessor &&src) = delete;
 
 		ppreprocessor(ppreprocessor &&s) noexcept
@@ -77,7 +77,7 @@ namespace plib {
 			return *this;
 		}
 
-		[[noreturn]] void error(const pstring &err);
+		[[noreturn]] void error(const pstring &err) noexcept(false);
 
 	protected:
 
@@ -87,7 +87,7 @@ namespace plib {
 			explicit readbuffer(ppreprocessor *strm) : m_strm(strm), m_buf()
 			{ setg(nullptr, nullptr, nullptr); }
 			readbuffer(readbuffer &&rhs) noexcept : m_strm(rhs.m_strm), m_buf()  {}
-			COPYASSIGN(readbuffer, delete)
+			PCOPYASSIGN(readbuffer, delete)
 			readbuffer &operator=(readbuffer &&src) = delete;
 			~readbuffer() override = default;
 
@@ -132,7 +132,7 @@ namespace plib {
 		void process_stack();
 
 		string_list tokenize(const pstring &str, const string_list &sep, bool remove_ws, bool concat);
-		bool is_valid_token(const pstring &str);
+		static bool is_valid_token(const pstring &str);
 
 		std::pair<pstring,bool> process_line(pstring line);
 		pstring process_comments(pstring line);

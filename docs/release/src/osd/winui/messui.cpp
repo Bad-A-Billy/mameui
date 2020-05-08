@@ -457,7 +457,7 @@ static string ProcessSWDir(int drvindex)
 	string t = GetSWDir();
 	if (!t.empty())
 	{
-		printf("ProcessSWDir: B\n");fflush(stdout);
+		printf("ProcessSWDir: B=%s\n",t.c_str());fflush(stdout);
 		strcpy(dir0, t.c_str()); // global SW
 		t0 = strtok(dir0, ";");
 		if (t0 && osd::directory::open(t0))  // make sure its valid
@@ -471,10 +471,10 @@ static string ProcessSWDir(int drvindex)
 	char dir1[2048];
 	strcpy(dir1, o.value(OPTION_SWPATH));
 	char* t1 = strtok(dir1, ";");
-	printf("ProcessSWDir: D\n");fflush(stdout);
+	printf("ProcessSWDir: D=%s=%s\n",t1,o.value(OPTION_SWPATH));fflush(stdout);
 	if (t1 && osd::directory::open(t1))  // make sure its valid
 		if (b_dir && (strcmp(t0, t1) != 0))
-			return string("1") + string(dir1);
+			return string("1") + o.value(OPTION_SWPATH);
 
 	// not specified in driver, try parent if it has one
 	printf("ProcessSWDir: E\n");fflush(stdout);
@@ -496,7 +496,7 @@ static string ProcessSWDir(int drvindex)
 				if (b_dir && (strcmp(t0, t1) != 0))
 				{
 					printf("ProcessSWDir: GC\n");fflush(stdout);
-					return string("1") + string(dir1);
+					return string("1") + o.value(OPTION_SWPATH);
 				}
 			}
 		}
@@ -516,13 +516,13 @@ static string ProcessSWDir(int drvindex)
 		t1 = strtok(dir1, ";");
 		if (t1 && osd::directory::open(t1))  // make sure its valid
 			if (b_dir && (strcmp(t0, t1) != 0))
-				return string("1") + string(dir1);
+				return string("1") + o.value(OPTION_SWPATH);
 	}
 
 	// Try the global root
 	printf("ProcessSWDir: J\n");fflush(stdout);
 	if (b_dir)
-		return string("0") + string(dir0);
+		return string("0") + t;
 
 	// nothing valid, drop to default emu directory
 	printf("ProcessSWDir: K\n");fflush(stdout);
@@ -554,7 +554,7 @@ static BOOL AddSoftwarePickerDirs(HWND hwndPicker, LPCSTR pszDirectories, LPCSTR
 		if (!SoftwarePicker_AddDirectory(hwndPicker, pszNewString.c_str()))
 			return false;
 
-		t1 = strtok (NULL, ",");
+		t1 = strtok (NULL, ";");
 	}
 	return true;
 }
@@ -875,8 +875,7 @@ BOOL MyFillSoftwareList(int drvindex, BOOL bForce)
 	printf("MyFillSoftwareList: Getting Softlist Information\n");fflush(stdout);
 	for (software_list_device &swlistdev : software_list_device_iterator(s_config->mconfig->root_device()))
 	{
-		if ((swlistdev.list_type() == SOFTWARE_LIST_COMPATIBLE_SYSTEM)
-			|| (swlistdev.list_type() == SOFTWARE_LIST_ORIGINAL_SYSTEM))
+		if (swlistdev.is_compatible() || swlistdev.is_original())
 		{
 			for (const software_info &swinfo : swlistdev.get_info())
 			{
@@ -895,13 +894,13 @@ BOOL MyFillSoftwareList(int drvindex, BOOL bForce)
 							if (swpart.matches_interface(interface))
 							{
 								// Extract the Usage data from the "info" fields.
-								const char* usage = NULL;
+								string usage;
 								for (const feature_list_item &flist : swinfo.other_info())
 									if (flist.name() == "usage")
-										usage = flist.value().c_str();
+										usage = flist.value();
 								// Now actually add the item
-								SoftwareList_AddFile(hwndSoftwareList, swinfo.shortname().c_str(), swlistdev.list_name().c_str(), swinfo.longname().c_str(),
-									swinfo.publisher().c_str(), swinfo.year().c_str(), usage, image.brief_instance_name().c_str());
+								SoftwareList_AddFile(hwndSoftwareList, swinfo.shortname(), swlistdev.list_name(), swinfo.longname(),
+									swinfo.publisher(), swinfo.year(), usage, image.brief_instance_name());
 								break;
 							}
 						}
@@ -1220,7 +1219,7 @@ static void MessSetupDevice(common_file_dialog_proc cfd, const device_image_inte
 	// We only want the first path; throw out the rest
 	size_t i = dst.find(';');
 	if (i != string::npos)
-		dst.substr(0, i);
+		dst = dst.substr(0, i);
 	wchar_t* t_s = ui_wstring_from_utf8(dst.c_str());
 
 	//  begin_resource_tracking();
@@ -1287,7 +1286,7 @@ static BOOL MView_GetOpenFileName(HWND hwndMView, const machine_config *config, 
 		/* We only want the first path; throw out the rest */
 		size_t i = dst.find(';');
 		if (i != string::npos)
-			dst.substr(0, i);
+			dst = dst.substr(0, i);
 	}
 
 	mess_image_type imagetypes[256];
@@ -1361,7 +1360,7 @@ static BOOL MView_GetOpenItemName(HWND hwndMView, const machine_config *config, 
 		// set up editbox display text
 		mbstowcs(pszFilename, t3.c_str(), nFilenameLength-1); // convert it back to a wide string
 
-		// set up inifile text to signify to MAME that a SW ITEM is to be used
+		// set up inifile text to signify to MAME that a SW ITEM is to be used ************** will only load to the specified slot, multipart items are cut to the first
 		SetSelectedSoftware(drvindex, dev->instance_name(), t3.c_str());
 		mvmap[opt_name] = 1;
 	}
@@ -1383,7 +1382,7 @@ static BOOL MView_GetCreateFileName(HWND hwndMView, const machine_config *config
 	/* We only want the first path; throw out the rest */
 	size_t i = dst.find(';');
 	if (i != string::npos)
-		dst.substr(0, i);
+		dst = dst.substr(0, i);
 
 	TCHAR *t_s = ui_wstring_from_utf8(dst.c_str());
 	mess_image_type imagetypes[256];
@@ -1597,14 +1596,11 @@ static void SoftwareList_EnteringItem(HWND hwndSoftwareList, int nItem)
 		// Get the fullname for this file
 		LPCSTR pszFullName = SoftwareList_LookupFullname(hwndSoftwareList, nItem); // for the screenshot and SetSoftware.
 
-		char t[100];
-		strncpyz(t, SoftwareList_LookupDevice(hwndSoftwareList, nItem), ARRAY_LENGTH(t));
-		string opt_name = t[0] ? t : "";
-
 		// For UpdateScreenShot()
 		strncpyz(g_szSelectedItem, pszFullName, ARRAY_LENGTH(g_szSelectedItem));
 		UpdateScreenShot();
-		SetSelectedSoftware(drvindex, opt_name, pszFullName);
+		// use SOFTWARENAME option to properly load a multipart set
+		SetSelectedSoftware(drvindex, "", pszFullName);
 	}
 }
 

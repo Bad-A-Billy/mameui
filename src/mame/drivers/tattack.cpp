@@ -3,7 +3,7 @@
 /****************************************************************************
     Time Attacker
 
-    driver by Tomasz Slanina analog[at]op.pl
+    driver by Tomasz Slanina
     improvements by Angelo Salese
 
     Z80A,
@@ -124,7 +124,7 @@ TILE_GET_INFO_MEMBER(tattack_state::get_tile_info)
 
 	color >>= 1;
 
-	SET_TILE_INFO_MEMBER(0,
+	tileinfo.set(0,
 			code,
 			color,
 			0);

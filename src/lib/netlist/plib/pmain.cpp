@@ -5,7 +5,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <string.h>
+#include <cstring>
 #include <tchar.h>
 #endif
 
@@ -26,8 +26,7 @@ namespace plib {
 	#endif
 
 	app::app()
-	: options()
-	, pout(&std::cout)
+	: pout(&std::cout)
 	, perr(&std::cerr)
 	{
 
@@ -36,19 +35,15 @@ namespace plib {
 	int app::main_utfX(int argc, char **argv)
 	{
 		auto r = this->parse(argc, argv);
-		int ret = 0;
 
 		if (r != argc)
 		{
 			this->perr("Error parsing {}\n", argv[r]);
-			//FIXME: usage_short
-			this->perr(this->usage());
-			ret = 1;
+			this->perr(this->usage_short());
+			return 1;
 		}
-		else
-			ret = this->execute();
 
-		return ret;
+		return this->execute();
 	}
 
 #ifdef _WIN32

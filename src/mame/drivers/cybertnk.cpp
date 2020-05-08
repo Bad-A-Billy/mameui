@@ -4,7 +4,7 @@
 
 Cyber Tank HW (c) 1987/1988 Coreland Technology
 
-preliminary driver by Angelo Salese & David Haywood
+driver by Angelo Salese & David Haywood
 
 Maybe it has some correlation with WEC Le Mans HW? (supposedly that was originally done by Coreland too)
 
@@ -267,7 +267,7 @@ TILE_GET_INFO_MEMBER(cybertnk_state::get_tile_info)
 	int pal = (code & 0xe000) >> 13;
 	pal     |=(code & 0x1c00) >> 7;
 
-	SET_TILE_INFO_MEMBER(Layer,
+	tileinfo.set(Layer,
 			code & 0x1fff,
 			pal,
 			0);

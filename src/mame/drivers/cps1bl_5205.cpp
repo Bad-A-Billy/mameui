@@ -2,24 +2,31 @@
 // copyright-holders:David Haywood
 
 /*
-	CPS1 single board bootlegs (thought to be produced by "Playmark")
-	
-	sound hardware: Z80, YM2151, 2x oki MSM5205 (instead of oki M6295)
-	
-	Games known to use this h/w:
-	Captain Commando                       911014 ETC
-	Knights of the Round                   911127 ETC
-	Street Fighter II: The World Warrior   910204 ETC
-	Street Fighter II': Champion Edition   920313 ETC    * this might be hacked WW (uses WW portraits on character select screen)
-	Street Fighter II': Magic Delta Turbo  920313 ETC
-	The King of Dragons                    ?  (No dump)
-	
-	Generally the sound quality is quite poor compared to official Capcom hardware (consequence of M6295->2xM5205 conversion).
-	Most noticable is missing percussion backing of music tracks and no fade in/out effect.
-	Often the 2x M5205 are clocked with a 400KHz xtal (should really be 384KHz) so pitch of samples is slightly out as well.
-	The sf2 sets seem to have quite a few missing samples?
-	
-	*** see fcrash.cpp for game status ***
+    CPS1 single board bootlegs (thought to be produced by "Playmark")
+
+    sound hardware: Z80, YM2151, 2x oki MSM5205 (instead of oki M6295)
+
+    Games known to use this h/w:
+    Captain Commando                       911014 ETC
+    Knights of the Round                   911127 ETC
+    Street Fighter II: The World Warrior   910204 ETC
+    Street Fighter II': Champion Edition   920313 ETC    * this might be hacked WW (uses WW portraits on character select screen)
+    Street Fighter II': Magic Delta Turbo  920313 ETC
+    The King of Dragons                    ?  (No dump)
+
+    Generally the sound quality is quite poor compared to official Capcom hardware (consequence of M6295->2xM5205 conversion).
+    Most noticable is missing percussion backing of music tracks and no fade in/out effect.
+    Often the 2x M5205 are clocked with a 400KHz xtal (should really be 384KHz) so pitch of samples is slightly out as well.
+    The sf2 sets seem to have quite a few missing samples?
+
+Status of each game:
+--------------------
+sf2mdt, sf2mdtb: OK.
+sf2mdta, sf2ceb: Scroll 2X has strange 0x200 writes that cause missing fighters' portraits at the vs. screen
+                 and glitched backgrounds during fights. Masking them out seems a hack.
+captcommb2:      OK.
+knightsb3:       OK.
+
 */
 
 #include "emu.h"
@@ -43,23 +50,24 @@ public:
 		: fcrash_state(mconfig, type, tag)
 		, m_msm_mux(*this, "msm_mux%u", 1)
 	{ }
-	
+
 	void captcommb2(machine_config &config);
+	void knightsb(machine_config &config);
 	void sf2b(machine_config &config);
 	void sf2mdt(machine_config &config);
-	
+
 	void init_captcommb2();
 	void init_knightsb();
 	void init_sf2b();
 	void init_sf2mdt();
 	void init_sf2mdta();
 	void init_sf2mdtb();
-	
+
 private:
 	DECLARE_MACHINE_START(captcommb2);
 	DECLARE_MACHINE_RESET(captcommb2);
 	DECLARE_MACHINE_START(sf2mdt);
-	
+
 	DECLARE_WRITE16_MEMBER(captcommb2_layer_w);
 	DECLARE_WRITE16_MEMBER(captcommb2_soundlatch_w);
 	DECLARE_READ8_MEMBER(captcommb2_soundlatch_r);
@@ -70,14 +78,14 @@ private:
 	DECLARE_WRITE16_MEMBER(sf2mdt_layer_w);
 	DECLARE_WRITE16_MEMBER(sf2mdt_soundlatch_w);
 	DECLARE_WRITE16_MEMBER(sf2mdta_layer_w);
-	
+
 	void captcommb2_map(address_map &map);
 	void sf2b_map(address_map &map);
 	void sf2mdt_map(address_map &map);
 	void captcommb2_z80map(address_map &map);
-	
+
 	bool m_captcommb2_mux_toggle;
-	
+
 	optional_device_array<ls157_device, 2> m_msm_mux;
 };
 
@@ -87,7 +95,7 @@ public:
 	captcommb2_state(const machine_config &mconfig, device_type type, const char *tag)
 		: cps1bl_5205_state(mconfig, type, tag)
 	{ }
-	
+
 private:
 	void bootleg_render_sprites(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect) override;
 };
@@ -346,13 +354,13 @@ void cps1bl_5205_state::captcommb2(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &cps1bl_5205_state::captcommb2_map);
 	m_maincpu->set_vblank_int("screen", FUNC(cps1bl_5205_state::cps1_interrupt));
 	m_maincpu->set_addrmap(m68000_base_device::AS_CPU_SPACE, &cps1bl_5205_state::cpu_space_map);
-	
+
 	Z80(config, m_audiocpu, 30000000 / 8);  // 3.75MHz measured on pcb
 	m_audiocpu->set_addrmap(AS_PROGRAM, &cps1bl_5205_state::captcommb2_z80map);
-	
+
 	MCFG_MACHINE_START_OVERRIDE(cps1bl_5205_state, captcommb2)
 	MCFG_MACHINE_RESET_OVERRIDE(cps1bl_5205_state, captcommb2)
-	
+
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(CPS_PIXEL_CLOCK, CPS_HTOTAL, CPS_HBEND, CPS_HBSTART, CPS_VTOTAL, CPS_VBEND, CPS_VBSTART);
 	m_screen->set_screen_update(FUNC(cps1bl_5205_state::screen_update_fcrash));
@@ -364,18 +372,18 @@ void cps1bl_5205_state::captcommb2(machine_config &config)
 
 	SPEAKER(config, "mono").front_center();
 	GENERIC_LATCH_8(config, m_soundlatch);
-	
+
 	ym2151_device &ym2151(YM2151(config, "2151", 30000000 / 8));  // 3.75MHz measured on pcb
 	// IRQ pin not used
 	ym2151.add_route(0, "mono", 0.35);
 	ym2151.add_route(1, "mono", 0.35);
-	
+
 	LS157(config, m_msm_mux[0], 0);
 	m_msm_mux[0]->out_callback().set("msm1", FUNC(msm5205_device::data_w));
 
 	LS157(config, m_msm_mux[1], 0);
 	m_msm_mux[1]->out_callback().set("msm2", FUNC(msm5205_device::data_w));
-	
+
 	MSM5205(config, m_msm_1, 400000);  // 400kHz measured on pcb
 	m_msm_1->vck_callback().set(FUNC(cps1bl_5205_state::captcommb2_mux_select_w));
 	m_msm_1->vck_callback().append(m_msm_2, FUNC(msm5205_device::vclk_w));
@@ -385,6 +393,13 @@ void cps1bl_5205_state::captcommb2(machine_config &config)
 	MSM5205(config, m_msm_2, 400000);
 	m_msm_2->set_prescaler_selector(msm5205_device::SEX_4B);
 	m_msm_2->add_route(ALL_OUTPUTS, "mono", 0.25);
+}
+
+void cps1bl_5205_state::knightsb(machine_config &config)
+{
+	captcommb2(config);
+	m_msm_1->reset_routes().add_route(ALL_OUTPUTS, "mono", 0.5);
+	m_msm_2->reset_routes().add_route(ALL_OUTPUTS, "mono", 0.5);
 }
 
 void cps1bl_5205_state::sf2b(machine_config &config)
@@ -428,7 +443,7 @@ void cps1bl_5205_state::sf2mdt(machine_config &config)
 
 	LS157(config, m_msm_mux[1], 0);
 	m_msm_mux[1]->out_callback().set("msm2", FUNC(msm5205_device::data_w));
-	
+
 	MSM5205(config, m_msm_1, 400000);  // 400kHz ?
 	m_msm_1->vck_callback().set(FUNC(cps1bl_5205_state::captcommb2_mux_select_w));
 	m_msm_1->vck_callback().append(m_msm_2, FUNC(msm5205_device::vclk_w));
@@ -505,7 +520,7 @@ void cps1bl_5205_state::sf2mdt_map(address_map &map)
  *  138 pin 10  E000-E3FF W     latch bank and 5202 reset lines
  *  138 pin 9   E400-E7FF W     master 5205
  *  138 pin 7   EC00-EFFF W     ?  pin not used
- *  
+ *
  *  gal pin 15  0000-BFFF R     rom
  */
 void cps1bl_5205_state::captcommb2_z80map(address_map &map)
@@ -536,7 +551,7 @@ MACHINE_START_MEMBER(cps1bl_5205_state, captcommb2)
 	//m_sprite_base = 0x1000;
 	m_sprite_list_end_marker = 0x8000;
 	m_sprite_x_offset = 0;
-	
+
 	save_item(NAME(m_captcommb2_mux_toggle));
 }
 
@@ -574,9 +589,9 @@ void cps1bl_5205_state::init_captcommb2()
 		uint8_t x = gfx[i];
 		gfx[i] = bitswap(x, 7, 6 ,5, 2, 3, 4, 1, 0);
 	}
-	
+
 	init_mtwinsb();
-	
+
 	// patch - fix invisible test screen at start
 	uint8_t *rom = memregion("maincpu")->base();
 	rom[0x65c] = 0x68;
@@ -587,8 +602,7 @@ void cps1bl_5205_state::init_knightsb()
 {
 	m_maincpu->space(AS_PROGRAM).unmap_write(0x980000, 0x980023);
 	m_maincpu->space(AS_PROGRAM).install_write_handler(0x980000, 0x980025, write16_delegate(*this, FUNC(cps1bl_5205_state::knightsb_layer_w)));
-	m_msm_1->reset_routes().add_route(ALL_OUTPUTS, "mono", 0.5);
-	m_msm_2->reset_routes().add_route(ALL_OUTPUTS, "mono", 0.5);
+
 	init_mtwinsb();
 }
 
@@ -606,11 +620,11 @@ void cps1bl_5205_state::init_sf2b()
 void cps1bl_5205_state::init_sf2mdt()
 {
 	m_maincpu->space(AS_PROGRAM).install_write_handler(0x708100, 0x7081ff, write16_delegate(*this, FUNC(cps1bl_5205_state::sf2mdt_layer_w)));
-	
+
 	/* extra work ram */
 	m_bootleg_work_ram = std::make_unique<uint16_t[]>(0x8000);
 	m_maincpu->space(AS_PROGRAM).install_ram(0xfc0000, 0xfcffff, m_bootleg_work_ram.get());
-	
+
 	init_sf2mdtb();
 }
 
@@ -636,7 +650,7 @@ void cps1bl_5205_state::init_sf2mdtb()
 		rom[i + 3] = rom[i + 6];
 		rom[i + 6] = tmp;
 	}
-	
+
 	init_sf2b();
 }
 
@@ -674,7 +688,7 @@ void cps1bl_5205_state::init_sf2mdtb()
 
 static INPUT_PORTS_START( captcommb2 )
 	PORT_INCLUDE(captcomm)
-	
+
 	PORT_MODIFY("IN3")
 	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -812,7 +826,7 @@ static INPUT_PORTS_START( sf2mdtb )
 	PORT_DIPSETTING( 0x00, DEF_STR( On ) )
 	// debug mode? depending on other DSW setting get different "game" mode, autoplay, bonus round, etc...
 	PORT_DIPUNUSED_DIPLOC( 0x80, 0x80, "SW(A):8" )
-	
+
 	PORT_START("DSWB")
 	CPS1_DIFFICULTY_1("SW(B)")
 	PORT_DIPUNUSED_DIPLOC( 0x08, 0x08, "SW(B):4" )
@@ -853,7 +867,7 @@ void captcommb2_state::bootleg_render_sprites( screen_device &screen, bitmap_ind
 	bool flipx, flipy;
 	uint16_t *sprite_ram = m_bootleg_sprite_ram.get();
 	int base = (sprite_ram[0] ? 0x3000 : 0x1000) / 2;  // writes sprite buffer flip here instead of obj_base register
-	
+
 	// end of sprite table marker is 0x8000
 	// 1st sprite always 0x100e/0x300e
 	// sprites are: [ypos][tile#][color][xpos]
@@ -881,11 +895,11 @@ void captcommb2_state::bootleg_render_sprites( screen_device &screen, bitmap_ind
 		else
 			m_gfxdecode->gfx(2)->prio_transpen(bitmap, cliprect, tileno, colour, flipx, flipy, xpos, ypos, screen.priority(), 2, 15);
 	}
-	
+
 	/* tileno note:
-		sets the unused msb for certain tiles eg. middle parts of rocket launcher weapon,
-		this means the tile is out of range and therefore transparent,
-		most likely just a bug and the real h/w ignores the unused bit so the effect is not seen.
+	    sets the unused msb for certain tiles eg. middle parts of rocket launcher weapon,
+	    this means the tile is out of range and therefore transparent,
+	    most likely just a bug and the real h/w ignores the unused bit so the effect is not seen.
 	*/
 }
 
@@ -893,22 +907,22 @@ void captcommb2_state::bootleg_render_sprites( screen_device &screen, bitmap_ind
 // ************************************************************************* CAPTCOMMB2
 
 /*
-	Captain Commando:
-	
-	h/w issues compared to original game (captcomm)
-	-----------------------------------------------
-	these are present on the real board so are not emulation issues:
-	
-	* End sequence row scroll effect doesn't work.
-	* Capcom copyright text missing on title screen, deliberately shifted down out of visible area by bootleggers.
-	* Capcom logo missing from end sequence, as above.
-	* Sprite flickering effects eg. when character has invincibility, look a little different to original.
-	* Certain static sprites wobble vertically just a pixel or two  eg. manhole covers, breakable oil drums etc.
-	
-	these are present on the real board but are unintentionally "fixed" in emulation:
-	
-	* All '0' characters are missing in test menu eg. sound test, input test etc.
-	* Wrong tile displayed when character select count-down timer reaches zero (superscript '1' with white bar underneath)
+    Captain Commando:
+
+    h/w issues compared to original game (captcomm)
+    -----------------------------------------------
+    these are present on the real board so are not emulation issues:
+
+    * End sequence row scroll effect doesn't work.
+    * Capcom copyright text missing on title screen, deliberately shifted down out of visible area by bootleggers.
+    * Capcom logo missing from end sequence, as above.
+    * Sprite flickering effects eg. when character has invincibility, look a little different to original.
+    * Certain static sprites wobble vertically just a pixel or two  eg. manhole covers, breakable oil drums etc.
+
+    these are present on the real board but are unintentionally "fixed" in emulation:
+
+    * All '0' characters are missing in test menu eg. sound test, input test etc.
+    * Wrong tile displayed when character select count-down timer reaches zero (superscript '1' with white bar underneath)
 */
 ROM_START( captcommb2 )
 	ROM_REGION( CODE_SIZE, "maincpu", 0 ) // = captcommr1 + additional code mapped on top
@@ -922,7 +936,7 @@ ROM_START( captcommb2 )
 	ROM_CONTINUE(             0x000001, 0x04000)
 	ROM_CONTINUE(             0x018001, 0x04000)
 	ROM_IGNORE(                         0x18000)
-	
+
 	ROM_REGION( 0x400000, "gfx", 0 ) // some data bits are swapped, see init()
 	ROM_LOAD64_BYTE( "bnh-01.bin", 0x000000, 0x40000, CRC(ffbc3bdd) SHA1(fcee1befd8279d41a81689394a562e2344191e2a) )
 	ROM_CONTINUE(                  0x000004, 0x40000)
@@ -940,11 +954,11 @@ ROM_START( captcommb2 )
 	ROM_CONTINUE(                  0x200006, 0x40000)
 	ROM_LOAD64_BYTE( "bnh-08.bin", 0x200003, 0x40000, CRC(327b8da8) SHA1(4bcc6fd637d382ce35b9387568c53d89a55e8ed2) )
 	ROM_CONTINUE(                  0x200007, 0x40000)
-	
+
 	ROM_REGION( 0x50000, "audiocpu", 0 )
 	ROM_LOAD( "1.bin", 0x00000, 0x40000, CRC(aed2f4bd) SHA1(3bd567dc350bf6ac3a349548790ad49eb5bd8307) )
 	ROM_RELOAD(        0x10000, 0x40000 )
-	
+
 	/* pld devices:
 	#1   IC169   gal20v8           secured
 	#2   IC7     gal16v8           secured, bruteforce ok
@@ -962,39 +976,39 @@ ROM_END
 // ************************************************************************* KNIGHTSB, KNIGHTSB3
 
 /*
-	CPU
-	1x MC68000P12 ic65 main
-	1x Z0840006PSC ic1 sound
-	1x YM2151 ic29 sound
-	1x YM3012 ic30 sound
-	2x LM324 ic15,ic31 sound
-	2x M5205 ic184,ic185 sound
-	1x TDA2003 ic14 sound
-	1x oscillator 24.000000MHz (close to main)
-	1x oscillator 29.821000MHz (close to sound)
+    CPU
+    1x MC68000P12 ic65 main
+    1x Z0840006PSC ic1 sound
+    1x YM2151 ic29 sound
+    1x YM3012 ic30 sound
+    2x LM324 ic15,ic31 sound
+    2x M5205 ic184,ic185 sound
+    1x TDA2003 ic14 sound
+    1x oscillator 24.000000MHz (close to main)
+    1x oscillator 29.821000MHz (close to sound)
 
-	ROMs
-	5x M27C2001 1,2,3,4,5 dumped
-	4x mask ROM KA,KB,KC,KD not dumped
+    ROMs
+    5x M27C2001 1,2,3,4,5 dumped
+    4x mask ROM KA,KB,KC,KD not dumped
 
-	RAMs
-	4x KM62256ALP ic112,ic113,ic168,ic170
-	1x SYC6116L ic24
-	1x MCM2018AN ic7,ic8,ic51,ic56,ic70,ic71,ic77,ic78
+    RAMs
+    4x KM62256ALP ic112,ic113,ic168,ic170
+    1x SYC6116L ic24
+    1x MCM2018AN ic7,ic8,ic51,ic56,ic70,ic71,ic77,ic78
 
-	PLDs
-	1x TPC1020AFN ic116 read protected
-	3x GAL20V8A ic120,ic121,ic169 read protected
-	3x GAL16V8A ic7,ic72,ic80 read protected
+    PLDs
+    1x TPC1020AFN ic116 read protected
+    3x GAL20V8A ic120,ic121,ic169 read protected
+    3x GAL16V8A ic7,ic72,ic80 read protected
 
-	Note
-	1x JAMMA edge connector
-	2x 10 legs connector
-	1x trimmer (volume)
-	3x 8x2 switches DIP
+    Note
+    1x JAMMA edge connector
+    2x 10 legs connector
+    1x trimmer (volume)
+    3x 8x2 switches DIP
 
-	FIXME - graphics ROMs are wrong, copied from the other version 
-	ROMs missing are KA.IC91 KB.IC92 KC.IC93 KD.IC94
+    FIXME - graphics ROMs are wrong, copied from the other version
+    ROMs missing are KA.IC91 KB.IC92 KC.IC93 KD.IC94
 */
 ROM_START( knightsb )
 	ROM_REGION( CODE_SIZE, "maincpu", 0 )      /* 68000 code */
@@ -1019,17 +1033,17 @@ ROM_START( knightsb )
 ROM_END
 
 /*
-	Knights of the Round
-	pcb marking: ORD 92032
-	Very similar to knightsb set:
-	 maincpu roms are just 1 byte different, vector 1 (stack pointer init) is ff80d6 instead of ff81d6
-	 knightsb gfx roms are 4x 1MB (but not dumped), these are 8x 512KB (suspect data is same)
-	Some sound samples are very quiet on real pcb
-	Confirmed clocks (measured) are same as captcommb2:
-	 xtals: 30MHz, 24MHz, 400KHz
-	 68k = 12MHz (P10 model, overclocked)
-	 z80/ym = 3.75MHz
-	 5202 = 400KHz
+    Knights of the Round
+    pcb marking: ORD 92032
+    Very similar to knightsb set:
+     maincpu roms are just 1 byte different, vector 1 (stack pointer init) is ff80d6 instead of ff81d6
+     knightsb gfx roms are 4x 1MB (but not dumped), these are 8x 512KB (suspect data is same)
+    Some sound samples are very quiet on real pcb
+    Confirmed clocks (measured) are same as captcommb2:
+     xtals: 30MHz, 24MHz, 400KHz
+     68k = 12MHz (P10 model, overclocked)
+     z80/ym = 3.75MHz
+     5202 = 400KHz
 */
 ROM_START( knightsb3 )
 	ROM_REGION( CODE_SIZE, "maincpu", 0 )
@@ -1087,16 +1101,16 @@ ROM_START( sf2b2 )
 	ROM_LOAD16_BYTE( "1.bin", 0x000001, 0x80000, CRC(e58db26c) SHA1(da1a4e063fa770257fd3df5fdb3785c1856511a5) )
 
 	ROM_REGION( 0x600000, "gfx", 0 ) /* rearranged in init */
-	ROM_LOAD64_WORD( " 5.bin", 0x000000, 0x80000, CRC(47fab9ed) SHA1(1709becbe189b21f2c1920acef96f9412eb954e2) )
-	ROM_LOAD64_WORD( " 8.bin", 0x000002, 0x80000, CRC(b8c39d56) SHA1(ee2939f42e95c926bdd88adf326eee02cba3f37a) )
+	ROM_LOAD64_WORD( "5.bin",  0x000000, 0x80000, CRC(47fab9ed) SHA1(1709becbe189b21f2c1920acef96f9412eb954e2) )
+	ROM_LOAD64_WORD( "8.bin",  0x000002, 0x80000, CRC(b8c39d56) SHA1(ee2939f42e95c926bdd88adf326eee02cba3f37a) )
 	ROM_LOAD64_WORD( "11.bin", 0x000004, 0x80000, CRC(6e8c98d8) SHA1(fbd7d788349fd418c48aedd906c40960e41c20f1) )
 	ROM_LOAD64_WORD( "14.bin", 0x000006, 0x80000, CRC(672d4f85) SHA1(511a8878d14d3fd39c9a22efb983550098ea8760) )
-	ROM_LOAD64_WORD( " 4.bin", 0x200000, 0x80000, CRC(69d7b06b) SHA1(b428a0b5dfdee20d4d198673fe3b0147cad2d5bd) )
-	ROM_LOAD64_WORD( " 7.bin", 0x200002, 0x80000, CRC(ded88f5f) SHA1(71c63fed5a15f6ce1df878dca7aa5d53868e68ee) )
+	ROM_LOAD64_WORD( "4.bin",  0x200000, 0x80000, CRC(69d7b06b) SHA1(b428a0b5dfdee20d4d198673fe3b0147cad2d5bd) )
+	ROM_LOAD64_WORD( "7.bin",  0x200002, 0x80000, CRC(ded88f5f) SHA1(71c63fed5a15f6ce1df878dca7aa5d53868e68ee) )
 	ROM_LOAD64_WORD( "10.bin", 0x200004, 0x80000, CRC(8c2fca3c) SHA1(a84399e91dbf5790c3fe003385f6d9f4bc9d3366) )
 	ROM_LOAD64_WORD( "13.bin", 0x200006, 0x80000, CRC(26f09d38) SHA1(3babc4f502ea9e07f79306b1abc9c94f484f9cc1) )
-	ROM_LOAD64_WORD( " 6.bin", 0x400000, 0x80000, CRC(b6215991) SHA1(5e20632e1a2d6eebe3b5d314cf2549bb74d7118e) )
-	ROM_LOAD64_WORD( " 9.bin", 0x400002, 0x80000, CRC(b6a71ed7) SHA1(1850b4b4aa4b5cafc594b174322afefbdf215221) )
+	ROM_LOAD64_WORD( "6.bin",  0x400000, 0x80000, CRC(b6215991) SHA1(5e20632e1a2d6eebe3b5d314cf2549bb74d7118e) )
+	ROM_LOAD64_WORD( "9.bin",  0x400002, 0x80000, CRC(b6a71ed7) SHA1(1850b4b4aa4b5cafc594b174322afefbdf215221) )
 	ROM_LOAD64_WORD( "12.bin", 0x400004, 0x80000, CRC(971903fa) SHA1(849ee7200815ef73f75456e656f061f1e852af59) )
 	ROM_LOAD64_WORD( "15.bin", 0x400006, 0x80000, CRC(00983914) SHA1(4ead6bbce6ca8c4cc884d55c1f821242d0e67fae) )
 
@@ -1132,28 +1146,28 @@ ROM_END
 // ************************************************************************* SF2MDT, SF2MDTA, SF2MDTB
 
 /*
-	CPU
-	1x MC68000P12 (main)
-	1x TPC1020AFN-084C (main)
-	1x Z0840006PSC-Z80CPU (sound)
-	1x YM2151 (sound)
-	1x YM3012 (sound)
-	2x M5205 (sound)
-	2x LM324N (sound)
-	1x TDA2003 (sound)
-	1x oscillator 24.000000MHz
-	1x oscillator 30.000MHz
+    CPU
+    1x MC68000P12 (main)
+    1x TPC1020AFN-084C (main)
+    1x Z0840006PSC-Z80CPU (sound)
+    1x YM2151 (sound)
+    1x YM3012 (sound)
+    2x M5205 (sound)
+    2x LM324N (sound)
+    1x TDA2003 (sound)
+    1x oscillator 24.000000MHz
+    1x oscillator 30.000MHz
 
-	ROMs
-	14x AM27C040 (1,3,6,7,8,9,10,11,12,13,14,15,16,17)
-	3x TMS27C010A (2,4,5)
-	3x PAL 16S20 (ic7,ic72, ic80) (read protected, not dumped)
-	3x GAL20V8A (ic120, ic121, ic169) (read protected, not dumped)
+    ROMs
+    14x AM27C040 (1,3,6,7,8,9,10,11,12,13,14,15,16,17)
+    3x TMS27C010A (2,4,5)
+    3x PAL 16S20 (ic7,ic72, ic80) (read protected, not dumped)
+    3x GAL20V8A (ic120, ic121, ic169) (read protected, not dumped)
 
-	Note
-	1x JAMMA edge connector
-	1x trimmer (volume)
-	3x 8x2 switches dip
+    Note
+    1x JAMMA edge connector
+    1x trimmer (volume)
+    3x 8x2 switches dip
 */
 ROM_START( sf2mdt )
 	ROM_REGION( CODE_SIZE, "maincpu", 0 )      /* 68000 code */
@@ -1163,15 +1177,15 @@ ROM_START( sf2mdt )
 	ROM_LOAD16_BYTE( "2.ic175", 0x100001, 0x20000, CRC(924c6ce2) SHA1(676a912652bd75da5087f0c7eae047b7681a993c) )
 
 	ROM_REGION( 0x600000, "gfx", 0 ) /* rearranged in init */
-	ROM_LOAD64_WORD( " 7.ic90", 0x000000, 0x80000, CRC(896eaf48) SHA1(5a13ae8b554e05eed3d5749aaf5845d499bce45b) )
+	ROM_LOAD64_WORD( "7.ic90",  0x000000, 0x80000, CRC(896eaf48) SHA1(5a13ae8b554e05eed3d5749aaf5845d499bce45b) )
 	ROM_LOAD64_WORD( "10.ic88", 0x000002, 0x80000, CRC(ef3f5be8) SHA1(d4e1de7d7caf6977e48544d6701618ae70c717f9) )
 	ROM_LOAD64_WORD( "13.ic89", 0x000004, 0x80000, CRC(305dd72a) SHA1(c373b517c23f3b019abb06e21f6b9ab6e1e47909) )
 	ROM_LOAD64_WORD( "16.ic87", 0x000006, 0x80000, CRC(e57f6db9) SHA1(b37f95737804002ec0e237472eaacf0bc1e868e8) )
-	ROM_LOAD64_WORD( " 6.ic91", 0x200000, 0x80000, CRC(054cd5c4) SHA1(07f275e118c141a84ca15a2e9edc81694af37cf2) )
-	ROM_LOAD64_WORD( " 9.ic93", 0x200002, 0x80000, CRC(818ca33d) SHA1(dfb707e17c83216f8a62e905f8c7cd6d406b417b) )
+	ROM_LOAD64_WORD( "6.ic91",  0x200000, 0x80000, CRC(054cd5c4) SHA1(07f275e118c141a84ca15a2e9edc81694af37cf2) )
+	ROM_LOAD64_WORD( "9.ic93",  0x200002, 0x80000, CRC(818ca33d) SHA1(dfb707e17c83216f8a62e905f8c7cd6d406b417b) )
 	ROM_LOAD64_WORD( "12.ic92", 0x200004, 0x80000, CRC(87e069e8) SHA1(cddd3be84f8379134590bfbbb080518f28120e49) )
 	ROM_LOAD64_WORD( "15.ic94", 0x200006, 0x80000, CRC(5dfb44d1) SHA1(08e44b8efc84f9cfc829aabf704155ddc700de76) )
-	ROM_LOAD64_WORD( " 8.ic86", 0x400000, 0x80000, CRC(34bbb3fa) SHA1(7794e89258f12b17d38c3d302dc15c502a8c8eb6) )
+	ROM_LOAD64_WORD( "8.ic86",  0x400000, 0x80000, CRC(34bbb3fa) SHA1(7794e89258f12b17d38c3d302dc15c502a8c8eb6) )
 	ROM_LOAD64_WORD( "11.ic84", 0x400002, 0x80000, CRC(cea6d1d6) SHA1(9c953db42f0d877e43c0c239f69a00df39a18295) )
 	ROM_LOAD64_WORD( "14.ic85", 0x400004, 0x80000, CRC(7d9f1a67) SHA1(6deb7fff867c42b13a32bb11eda798cfdb4cbaa8) )
 	ROM_LOAD64_WORD( "17.ic83", 0x400006, 0x80000, CRC(91a9a05d) SHA1(5266ceddd2df925e79b4200843dec2f7aa9297b3) )
@@ -1210,15 +1224,15 @@ ROM_START( sf2mdtb )
 	ROM_LOAD16_BYTE( "2.ic175", 0x100001, 0x20000, CRC(bd98ff15) SHA1(ed902d949b0b5c5beaaea78a4b418ffa6db9e1df) ) // sldh
 
 	ROM_REGION( 0x600000, "gfx", 0 ) /* rearranged in init */
-	ROM_LOAD64_WORD( " 7.ic90", 0x000000, 0x80000, CRC(896eaf48) SHA1(5a13ae8b554e05eed3d5749aaf5845d499bce45b) )
+	ROM_LOAD64_WORD( "7.ic90",  0x000000, 0x80000, CRC(896eaf48) SHA1(5a13ae8b554e05eed3d5749aaf5845d499bce45b) )
 	ROM_LOAD64_WORD( "10.ic88", 0x000002, 0x80000, CRC(ef3f5be8) SHA1(d4e1de7d7caf6977e48544d6701618ae70c717f9) )
 	ROM_LOAD64_WORD( "13.ic89", 0x000004, 0x80000, CRC(305dd72a) SHA1(c373b517c23f3b019abb06e21f6b9ab6e1e47909) )
 	ROM_LOAD64_WORD( "16.ic87", 0x000006, 0x80000, CRC(e57f6db9) SHA1(b37f95737804002ec0e237472eaacf0bc1e868e8) )
-	ROM_LOAD64_WORD( " 6.ic91", 0x200000, 0x80000, CRC(054cd5c4) SHA1(07f275e118c141a84ca15a2e9edc81694af37cf2) )
-	ROM_LOAD64_WORD( " 9.ic93", 0x200002, 0x80000, CRC(818ca33d) SHA1(dfb707e17c83216f8a62e905f8c7cd6d406b417b) )
+	ROM_LOAD64_WORD( "6.ic91",  0x200000, 0x80000, CRC(054cd5c4) SHA1(07f275e118c141a84ca15a2e9edc81694af37cf2) )
+	ROM_LOAD64_WORD( "9.ic93",  0x200002, 0x80000, CRC(818ca33d) SHA1(dfb707e17c83216f8a62e905f8c7cd6d406b417b) )
 	ROM_LOAD64_WORD( "12.ic92", 0x200004, 0x80000, CRC(87e069e8) SHA1(cddd3be84f8379134590bfbbb080518f28120e49) )
 	ROM_LOAD64_WORD( "15.ic94", 0x200006, 0x80000, CRC(5dfb44d1) SHA1(08e44b8efc84f9cfc829aabf704155ddc700de76) )
-	ROM_LOAD64_WORD( " 8.ic86", 0x400000, 0x80000, CRC(34bbb3fa) SHA1(7794e89258f12b17d38c3d302dc15c502a8c8eb6) )
+	ROM_LOAD64_WORD( "8.ic86",  0x400000, 0x80000, CRC(34bbb3fa) SHA1(7794e89258f12b17d38c3d302dc15c502a8c8eb6) )
 	ROM_LOAD64_WORD( "11.ic84", 0x400002, 0x80000, CRC(cea6d1d6) SHA1(9c953db42f0d877e43c0c239f69a00df39a18295) )
 	ROM_LOAD64_WORD( "14.ic85", 0x400004, 0x80000, CRC(7d9f1a67) SHA1(6deb7fff867c42b13a32bb11eda798cfdb4cbaa8) )
 	ROM_LOAD64_WORD( "17.ic83", 0x400006, 0x80000, CRC(91a9a05d) SHA1(5266ceddd2df925e79b4200843dec2f7aa9297b3) )
@@ -1231,10 +1245,10 @@ ROM_END
 
 // ************************************************************************* DRIVER MACROS
 
-GAME( 1991,  captcommb2,  0,        captcommb2,  captcommb2,  captcommb2_state,   init_captcommb2,  ROT0,  "bootleg",  "Captain Commando (bootleg with 2xMSM5205)",  MACHINE_SUPPORTS_SAVE )  // 911014 ETC
+GAME( 1991,  captcommb2,  captcomm, captcommb2,  captcommb2,  captcommb2_state,   init_captcommb2,  ROT0,  "bootleg",  "Captain Commando (bootleg with 2xMSM5205)",  MACHINE_SUPPORTS_SAVE )  // 911014 ETC
 
-GAME( 1991,  knightsb,    knights,  captcommb2,  knights,     captcommb2_state,   init_knightsb,    ROT0,  "bootleg",  "Knights of the Round (bootleg with 2xMSM5205, set 1)",  MACHINE_SUPPORTS_SAVE )  // 911127 ETC
-GAME( 1991,  knightsb3,   0,        captcommb2,  knights,     captcommb2_state,   init_knightsb,    ROT0,  "bootleg",  "Knights of the Round (bootleg with 2xMSM5205, set 2)",  MACHINE_SUPPORTS_SAVE )  // 911127 ETC
+GAME( 1991,  knightsb,    knights,  knightsb,    knights,     captcommb2_state,   init_knightsb,    ROT0,  "bootleg",  "Knights of the Round (bootleg with 2xMSM5205, set 1)",  MACHINE_SUPPORTS_SAVE )  // 911127 ETC
+GAME( 1991,  knightsb3,   knights,  knightsb,    knights,     captcommb2_state,   init_knightsb,    ROT0,  "bootleg",  "Knights of the Round (bootleg with 2xMSM5205, set 2)",  MACHINE_SUPPORTS_SAVE )  // 911127 ETC
 
 GAME( 1992,  sf2b,        sf2,      sf2b,        sf2mdt,      cps1bl_5205_state,  init_sf2b,        ROT0,  "bootleg (Playmark)",  "Street Fighter II: The World Warrior (bootleg, set 1)",  MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )  // 910204 ETC
 GAME( 1992,  sf2b2,       sf2,      sf2b,        sf2mdt,      cps1bl_5205_state,  init_sf2mdtb,     ROT0,  "bootleg", "Street Fighter II: The World Warrior (bootleg, set 2)",  MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )              // 910204 ETC

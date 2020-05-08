@@ -85,7 +85,7 @@ TILE_GET_INFO_MEMBER(spdheat_state::get_fg_tile_info)
 	uint16_t data = m_fg_ram[screen][tile_index];
 	uint16_t code = data & 0x07ff;
 	uint16_t color = (data & 0x3800) >> 12;
-	SET_TILE_INFO_MEMBER(0, code, color, TILE_FLIPYX((data & 0xc000) >> 14));
+	tileinfo.set(0, code, color, TILE_FLIPYX((data & 0xc000) >> 14));
 }
 
 
@@ -482,9 +482,7 @@ static INPUT_PORTS_START( spdheat )
 	PORT_DIPNAME( 0x0004, 0x0004, DEF_STR( Free_Play ) ) PORT_DIPLOCATION("DSWA:3")
 	PORT_DIPSETTING(      0x0004, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0008, 0x0008, DEF_STR( Test ) ) PORT_DIPLOCATION("DSWA:4")
-	PORT_DIPSETTING(      0x0008, DEF_STR( Off ) )
-	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
+	PORT_SERVICE( 0x0008, IP_ACTIVE_LOW ) PORT_DIPLOCATION("DSWA:4")
 	PORT_DIPNAME( 0x0010, 0x0000, DEF_STR( Demo_Sounds ) ) PORT_DIPLOCATION("DSWA:5")
 	PORT_DIPSETTING(      0x0010, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
@@ -800,7 +798,7 @@ ROM_START( spdheat )
 	ROM_REGION( 0x10000, "audiocpu", 0 )
 	ROM_LOAD( "a55-17.ic11",  0x00000, 0x08000, CRC(43c2318f) SHA1(472e9cc68bb8ff3c5c3d4ec475491ad1a97261e7) )
 
-    ROM_REGION( 0x10000, "subcpu", 0 ) // TODO: What are the correct labels for these?
+	ROM_REGION( 0x10000, "subcpu", 0 ) // TODO: What are the correct labels for these?
 	ROM_LOAD( "a55-15.ic5", 0x00000, 0x08000, CRC(c43b85ee) SHA1(7d7ed6b5f3e48a38b3e387f2dbc2f2bb0662db94) )
 	ROM_LOAD( "a55-16.ic6", 0x08000, 0x08000, CRC(8f45edbd) SHA1(29a696691bd199b6fff0fe0e9fd9241cec9f3fbe) )
 

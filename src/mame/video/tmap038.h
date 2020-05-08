@@ -23,6 +23,8 @@ public:
 	template <typename T> void set_gfxdecode_tag(T &&tag) { m_gfxdecode.set_tag(std::forward<T>(tag)); }
 	template <typename... T> void set_tile_callback(T &&... args) { m_038_cb.set(std::forward<T>(args)...); }
 	void set_gfx(u16 no) { m_gfxno = no; }
+	void set_xoffs(int xoffs, int flipped_xoffs) { m_xoffs = xoffs; m_flipped_xoffs = flipped_xoffs; }
+	void set_yoffs(int yoffs, int flipped_yoffs) { m_yoffs = yoffs; m_flipped_yoffs = flipped_yoffs; }
 
 	// call to do the rendering etc.
 	template<class _BitmapClass>
@@ -69,18 +71,20 @@ public:
 	u16 vregs(offs_t offset) const { return m_vregs[offset]; }
 
 	// vregs
-	bool flipx() const        { return BIT(~m_vregs[0], 15); }
-	bool rowscroll_en() const { return BIT(m_vregs[0], 14) && (m_lineram != nullptr); }
-	u16 scrollx() const       { return m_vregs[0] & 0x1ff; }
+	bool flipx() const         { return BIT(~m_vregs[0], 15); }
+	bool rowscroll_en() const  { return BIT(m_vregs[0], 14) && (m_lineram != nullptr); }
+	int scrollx() const        { return (m_vregs[0] & 0x1ff) + (flipx() ? m_flipped_xoffs : m_xoffs); }
 
-	bool flipy() const        { return BIT(~m_vregs[1], 15); }
-	bool rowselect_en() const { return BIT(m_vregs[1], 14) && (m_lineram != nullptr); }
-	bool tiledim() const      { return m_tiledim; }
-	u16 scrolly() const       { return m_vregs[1] & 0x1ff; }
+	bool flipy() const         { return BIT(~m_vregs[1], 15); }
+	bool rowselect_en() const  { return BIT(m_vregs[1], 14) && (m_lineram != nullptr); }
+	bool tiledim() const       { return m_tiledim; }
+	int scrolly() const        { return (m_vregs[1] & 0x1ff) + (flipy() ? m_flipped_yoffs : m_yoffs); }
 
-	bool enable() const       { return BIT(~m_vregs[2], 4); }
-	u16 external() const      { return m_vregs[2] & 0xf; }
+	bool enable() const        { return BIT(~m_vregs[2], 4); }
+	u16 external() const       { return m_vregs[2] & 0xf; }
 
+	bool tile_is_8x8() const   { return (!m_tiledim) || (m_vram_16x16 == nullptr); }
+	bool tile_is_16x16() const { return m_tiledim || (m_vram_8x8 == nullptr); }
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
@@ -99,6 +103,9 @@ private:
 
 	tmap038_cb_delegate m_038_cb;
 	tilemap_t* m_tmap;
+
+	int m_xoffs, m_flipped_xoffs;
+	int m_yoffs, m_flipped_yoffs;
 };
 
 

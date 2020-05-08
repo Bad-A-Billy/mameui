@@ -4,6 +4,7 @@
 #ifndef MAME_AUDIO_ELAN_EU3A05_H
 #define MAME_AUDIO_ELAN_EU3A05_H
 
+#include "sound/okiadpcm.h"
 
 //**************************************************************************
 //  TYPE DEFINITIONS
@@ -19,7 +20,7 @@ public:
 	auto space_read_callback() { return m_space_read_cb.bind(); }
 
 	template <unsigned N> auto sound_end_cb() { return m_sound_end_cb[N].bind(); }
-	
+
 	void map(address_map& map);
 
 
@@ -40,6 +41,7 @@ private:
 	uint32_t m_sound_byte_address[6];
 	uint32_t m_sound_byte_len[6];
 	uint32_t m_sound_current_nib_pos[6];
+	oki_adpcm_state m_adpcm[6];
 
 	uint8_t m_sound_trigger;
 	uint8_t m_sound_unk;
@@ -57,29 +59,29 @@ private:
 	void handle_sound_size_w(int which, int offset, uint8_t data);
 	uint8_t handle_sound_size_r(int which, int offset);
 
-	DECLARE_WRITE8_MEMBER(elan_eu3a05_sound_addr_w);
-	DECLARE_READ8_MEMBER(elan_eu3a05_sound_addr_r);
-	DECLARE_WRITE8_MEMBER(elan_eu3a05_sound_size_w);
-	DECLARE_READ8_MEMBER(elan_eu3a05_sound_size_r);
-	DECLARE_READ8_MEMBER(elan_eu3a05_sound_trigger_r);
-	DECLARE_WRITE8_MEMBER(elan_eu3a05_sound_trigger_w);
-	DECLARE_READ8_MEMBER(elan_eu3a05_sound_unk_r);
-	DECLARE_WRITE8_MEMBER(elan_eu3a05_sound_unk_w);
+	void elan_eu3a05_sound_addr_w(offs_t offset, uint8_t data);
+	uint8_t elan_eu3a05_sound_addr_r(offs_t offset);
+	void elan_eu3a05_sound_size_w(offs_t offset, uint8_t data);
+	uint8_t elan_eu3a05_sound_size_r(offs_t offset);
+	uint8_t elan_eu3a05_sound_trigger_r();
+	void elan_eu3a05_sound_trigger_w(uint8_t data);
+	uint8_t elan_eu3a05_sound_unk_r();
+	void elan_eu3a05_sound_unk_w(uint8_t data);
 
-	DECLARE_READ8_MEMBER(elan_eu3a05_50a8_r);
+	uint8_t elan_eu3a05_50a8_r();
 
-	DECLARE_READ8_MEMBER(reg50a4_r) { return m_50a4; }
-	DECLARE_WRITE8_MEMBER(reg50a4_w) { m_50a4 = data; }
-	DECLARE_READ8_MEMBER(reg50a9_r) { return m_50a9; }
-	DECLARE_WRITE8_MEMBER(reg50a9_w) { m_50a9 = data; }
+	uint8_t reg50a4_r();
+	void reg50a4_w(uint8_t data);
+	uint8_t reg50a9_r();
+	void reg50a9_w(uint8_t data);
 
-	DECLARE_READ8_MEMBER(elan_eu3a05_sound_volume_r);
-	DECLARE_WRITE8_MEMBER(elan_eu3a05_sound_volume_w);
+	uint8_t elan_eu3a05_sound_volume_r(offs_t offset);
+	void elan_eu3a05_sound_volume_w(offs_t offset, uint8_t data);
 
-	DECLARE_WRITE8_MEMBER(write_unmapped);
-	DECLARE_READ8_MEMBER(read_unmapped);
+	void write_unmapped(offs_t offset, uint8_t data);
+	uint8_t read_unmapped(offs_t offset);
 
-	devcb_write_line m_sound_end_cb[6];
+	devcb_write_line::array<6> m_sound_end_cb;
 };
 
 DECLARE_DEVICE_TYPE(ELAN_EU3A05_SOUND, elan_eu3a05_sound_device)

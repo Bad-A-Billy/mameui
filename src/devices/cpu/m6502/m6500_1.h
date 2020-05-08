@@ -60,7 +60,7 @@ public:
 	DECLARE_READ8_MEMBER(pb_r) { return m_port_buf[1]; }
 	DECLARE_READ8_MEMBER(pc_r) { return m_port_buf[2]; }
 	DECLARE_READ8_MEMBER(pd_r) { return m_port_buf[3]; }
-	DECLARE_WRITE8_MEMBER(pa_w);
+	void pa_w(uint8_t data);
 	DECLARE_WRITE8_MEMBER(pb_w);
 	DECLARE_WRITE8_MEMBER(pc_w);
 	DECLARE_WRITE8_MEMBER(pd_w);
@@ -113,9 +113,9 @@ protected:
 	void memory_map(address_map &map);
 
 private:
-	devcb_read8         m_port_in_cb[4];
-	devcb_write8        m_port_out_cb[4];
-	devcb_write_line    m_cntr_out_cb;
+	devcb_read8::array<4>   m_port_in_cb;
+	devcb_write8::array<4>  m_port_out_cb;
+	devcb_write_line        m_cntr_out_cb;
 
 	u8  m_cr;
 

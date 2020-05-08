@@ -51,7 +51,7 @@ namespace plib {
 		{
 		}
 
-		COPYASSIGNMOVE(uninitialised_array_t, delete)
+		PCOPYASSIGNMOVE(uninitialised_array_t, delete)
 		~uninitialised_array_t() noexcept
 		{
 			if (m_initialized>=N)
@@ -115,7 +115,7 @@ namespace plib {
 			constexpr element_t() : m_next(nullptr), m_prev(nullptr) {}
 			~element_t() noexcept = default;
 
-			COPYASSIGNMOVE(element_t, delete)
+			PCOPYASSIGNMOVE(element_t, delete)
 
 			constexpr LC *next() const noexcept { return m_next; }
 			constexpr LC *prev() const noexcept { return m_prev; }
@@ -133,10 +133,12 @@ namespace plib {
 			constexpr iter_t(iter_t &rhs) noexcept : p(rhs.p) { }
 			iter_t(iter_t &&rhs) noexcept { std::swap(*this, rhs);  }
 
-			iter_t& operator=(const iter_t &rhs) noexcept
+			iter_t& operator=(const iter_t &rhs) noexcept // NOLINT(bugprone-unhandled-self-assignment, cert-oop54-cpp)
 			{
-				if (this != &rhs)
-					p = rhs.p;
+				if (this == &rhs)
+					return *this;
+
+				p = rhs.p;
 				return *this;
 			}
 
@@ -156,7 +158,7 @@ namespace plib {
 			C14CONSTEXPR LC* operator->() const noexcept { return p; }
 		};
 
-		constexpr linkedlist_t() : m_head(nullptr) {}
+		constexpr linkedlist_t() noexcept : m_head(nullptr) {}
 
 		constexpr iter_t begin() const noexcept { return iter_t(m_head); }
 		constexpr iter_t end() const noexcept { return iter_t(nullptr); }
@@ -282,7 +284,7 @@ namespace plib {
 
 	// Use TS = true for a threadsafe queue
 	template <class T, bool TS>
-	class timed_queue_linear : nocopyassignmove
+	class timed_queue_linear
 	{
 	public:
 
@@ -291,6 +293,8 @@ namespace plib {
 		{
 			clear();
 		}
+
+		PCOPYASSIGNMOVE(timed_queue_linear, delete)
 
 		std::size_t capacity() const noexcept { return m_list.capacity() - 1; }
 		bool empty() const noexcept { return (m_end == &m_list[1]); }
@@ -326,7 +330,7 @@ namespace plib {
 				m_prof_call.inc();
 		}
 
-		T pop() noexcept       { return *(--m_end); }
+		void pop() noexcept       { --m_end; }
 		const T &top() const noexcept { return *(m_end-1); }
 
 		template <bool KEEPSTAT, class R>
@@ -410,7 +414,7 @@ namespace plib {
 	};
 
 	template <class T, bool TS>
-	class timed_queue_heap : nocopyassignmove
+	class timed_queue_heap
 	{
 	public:
 
@@ -424,6 +428,8 @@ namespace plib {
 		{
 			clear();
 		}
+
+		PCOPYASSIGNMOVE(timed_queue_heap, delete)
 
 		std::size_t capacity() const noexcept { return m_list.capacity(); }
 		bool empty() const noexcept { return &m_list[0] == m_end; }
@@ -461,8 +467,7 @@ namespace plib {
 				if (*i == elem)
 				{
 					m_end--;
-					for (;i < m_end; i++)
-						*i = std::move(*(i+1));
+					*i = *m_end;
 					std::make_heap(&m_list[0], m_end, compare());
 					return;
 				}

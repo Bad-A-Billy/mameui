@@ -63,8 +63,10 @@ files {
 	MAME_DIR .. "src/frontend/mame/cheat.h",
 	MAME_DIR .. "src/frontend/mame/clifront.cpp",
 	MAME_DIR .. "src/frontend/mame/clifront.h",
-	MAME_DIR .. "src/frontend/mame/info.cpp",
-	MAME_DIR .. "src/frontend/mame/info.h",
+	MAME_DIR .. "src/frontend/mame/infoxml.cpp",
+	MAME_DIR .. "src/frontend/mame/infoxml.h",
+	MAME_DIR .. "src/frontend/mame/iptseqpoll.cpp",
+	MAME_DIR .. "src/frontend/mame/iptseqpoll.h",
 	MAME_DIR .. "src/frontend/mame/language.cpp",
 	MAME_DIR .. "src/frontend/mame/language.h",
 	MAME_DIR .. "src/frontend/mame/luaengine.cpp",
@@ -77,6 +79,8 @@ files {
 	MAME_DIR .. "src/frontend/mame/media_ident.h",
 	MAME_DIR .. "src/frontend/mame/pluginopts.cpp",
 	MAME_DIR .. "src/frontend/mame/pluginopts.h",
+	MAME_DIR .. "src/frontend/mame/ui/about.cpp",
+	MAME_DIR .. "src/frontend/mame/ui/about.h",
 	MAME_DIR .. "src/frontend/mame/ui/analogipt.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/analogipt.cpp",
 	MAME_DIR .. "src/frontend/mame/ui/auditmenu.cpp",
@@ -172,3 +176,11 @@ files {
 }
 
 pchsource(MAME_DIR .. "src/frontend/mame/audit.cpp")
+
+dependency {
+	{ MAME_DIR .. "src/frontend/mame/ui/about.cpp", GEN_DIR .. "emu/copying.ipp" },
+}
+
+custombuildtask {
+	{ MAME_DIR .. "COPYING", GEN_DIR .. "emu/copying.ipp", { MAME_DIR .. "scripts/build/file2lines.py" }, { "@echo Converting COPYING...", PYTHON .. " $(1) $(<) $(@) copying_text" } },
+}

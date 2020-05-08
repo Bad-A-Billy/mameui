@@ -27,6 +27,7 @@
 #endif
 
 #include "netlist/nl_factory.h"
+#include "netlist/nl_setup.h" // FIXME: only needed for splitter code
 #include "nld_matrix_solver.h"
 #include "nld_ms_direct.h"
 #include "nld_ms_direct1.h"
@@ -68,10 +69,10 @@ namespace devices
 		if (m_params.m_dynamic_ts)
 			return;
 
-		netlist_time now(exec().time());
+		netlist_time_ext now(exec().time());
 		// force solving during start up if there are no time-step devices
 		// FIXME: Needs a more elegant solution
-		bool force_solve = (now < netlist_time::from_fp<decltype(m_params.m_max_timestep)>(2 * m_params.m_max_timestep));
+		bool force_solve = (now < netlist_time_ext::from_fp<decltype(m_params.m_max_timestep)>(2 * m_params.m_max_timestep));
 
 		std::size_t nthreads = std::min(static_cast<std::size_t>(m_params.m_parallel()), plib::omp::get_max_threads());
 
@@ -119,28 +120,27 @@ namespace devices
 		switch (m_params.m_method())
 		{
 			case solver::matrix_type_e::MAT_CR:
-				if (size > 0) // GCR always outperforms MAT solver
-				{
-					return create_it<solver::matrix_solver_GCR_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
-				}
-				else
-				{
-					return create_it<solver::matrix_solver_direct_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
-				}
-			case solver::matrix_type_e::SOR_MAT:
-				return create_it<solver::matrix_solver_SOR_mat_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+				return create_it<solver::matrix_solver_GCR_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
 			case solver::matrix_type_e::MAT:
 				return create_it<solver::matrix_solver_direct_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+#if (NL_USE_ACADEMIC_SOLVERS)
+			case solver::matrix_type_e::GMRES:
+				return create_it<solver::matrix_solver_GMRES_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+			case solver::matrix_type_e::SOR:
+				return create_it<solver::matrix_solver_SOR_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+			case solver::matrix_type_e::SOR_MAT:
+				return create_it<solver::matrix_solver_SOR_mat_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
 			case solver::matrix_type_e::SM:
 				// Sherman-Morrison Formula
 				return create_it<solver::matrix_solver_sm_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
 			case solver::matrix_type_e::W:
 				// Woodbury Formula
 				return create_it<solver::matrix_solver_w_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
-			case solver::matrix_type_e::SOR:
-				return create_it<solver::matrix_solver_SOR_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
-			case solver::matrix_type_e::GMRES:
-				return create_it<solver::matrix_solver_GMRES_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+#else
+			default:
+				state().log().warning(MW_SOLVER_METHOD_NOT_SUPPORTED(m_params.m_method().name(), "MAT_CR"));
+				return create_it<solver::matrix_solver_GCR_t<FT, SIZE>>(state(), solvername, nets, m_params, size);
+#endif
 		}
 		return plib::unique_ptr<solver::matrix_solver_t>();
 	}
@@ -159,7 +159,6 @@ namespace devices
 			case 2:
 				return plib::make_unique<solver::matrix_solver_direct2_t<FT>>(state(), sname, nets, &m_params);
 				break;
-#if 1
 			case 3:
 				return create_solver<FT, 3>(3, sname, nets);
 				break;
@@ -178,134 +177,131 @@ namespace devices
 			case 8:
 				return create_solver<FT, 8>(8, sname, nets);
 				break;
-			case 9:
-				return create_solver<FT, 9>(9, sname, nets);
-				break;
-			case 10:
-				return create_solver<FT, 10>(10, sname, nets);
-				break;
-#if 0
-			case 11:
-				return create_solver<FT, 11>(11, sname);
-				break;
-			case 12:
-				return create_solver<FT, 12>(12, sname);
-				break;
-			case 15:
-				return create_solver<FT, 15>(15, sname);
-				break;
-			case 31:
-				return create_solver<FT, 31>(31, sname);
-				break;
-			case 35:
-				return create_solver<FT, 35>(35, sname);
-				break;
-			case 43:
-				return create_solver<FT, 43>(43, sname);
-				break;
-			case 49:
-				return create_solver<FT, 49>(49, sname);
-				break;
-			case 87:
-				return create_solver<FT,86>(86, sname, nets);
-				break;
-#endif
-#endif
 			default:
 				log().info(MI_NO_SPECIFIC_SOLVER(net_count));
-				if (net_count <= 8)
-				{
-					return create_solver<FT, -8>(net_count, sname, nets);
-				}
-				else if (net_count <= 16)
+				if (net_count <= 16)
 				{
 					return create_solver<FT, -16>(net_count, sname, nets);
 				}
-				else if (net_count <= 32)
+				if (net_count <= 32)
 				{
 					return create_solver<FT, -32>(net_count, sname, nets);
 				}
-				else if (net_count <= 64)
+				if (net_count <= 64)
 				{
 					return create_solver<FT, -64>(net_count, sname, nets);
 				}
-				else if (net_count <= 128)
+				if (net_count <= 128)
 				{
 					return create_solver<FT, -128>(net_count, sname, nets);
 				}
-				else if (net_count <= 256)
+				if (net_count <= 256)
 				{
 					return create_solver<FT, -256>(net_count, sname, nets);
 				}
-				else if (net_count <= 512)
+				if (net_count <= 512)
 				{
 					return create_solver<FT, -512>(net_count, sname, nets);
 				}
-				else
-				{
-					return create_solver<FT, 0>(net_count, sname, nets);
-				}
+				return create_solver<FT, 0>(net_count, sname, nets);
 				break;
 		}
 	}
 
 	struct net_splitter
 	{
+		void run(netlist_state_t &netlist)
+		{
+			for (auto & net : netlist.nets())
+			{
+				netlist.log().verbose("processing {1}", net->name());
+				if (!net->is_rail_net() && net->has_connections())
+				{
+					netlist.log().verbose("   ==> not a rail net");
+					// Must be an analog net
+					auto &n = *static_cast<analog_net_t *>(net.get());
+					if (!already_processed(n))
+					{
+						groupspre.emplace_back(analog_net_t::list_t());
+						process_net(netlist, n);
+					}
+				}
+			}
+			for (auto &g : groupspre)
+				if (!g.empty())
+					groups.push_back(g);
+		}
+
+		std::vector<analog_net_t::list_t> groups;
+
+	private:
 
 		bool already_processed(const analog_net_t &n) const
 		{
 			// no need to process rail nets - these are known variables
-			if (n.isRailNet())
+			if (n.is_rail_net())
 				return true;
 			// if it's already processed - no need to continue
-			for (auto & grp : groups)
+			for (const auto & grp : groups)
 				if (plib::container::contains(grp, &n))
 					return true;
 			return false;
 		}
 
-		void process_net(analog_net_t &n)
+		bool check_if_processed_and_join(const analog_net_t &n)
 		{
-			// ignore empty nets. FIXME: print a warning message
-			if (n.num_cons() == 0)
-				return;
-			// add the net
-			groups.back().push_back(&n);
-			// process all terminals connected to this net
-			for (auto &term : n.core_terms())
+			// no need to process rail nets - these are known variables
+			if (n.is_rail_net())
+				return true;
+			// First check if it is in a previous group.
+			// In this case we need to merge this group into the current group
+			if (groupspre.size() > 1)
 			{
-				// only process analog terminals
-				if (term->is_type(detail::terminal_type::TERMINAL))
-				{
-					auto *pt = static_cast<terminal_t *>(term);
-					// check the connected terminal
-					analog_net_t &connected_net = pt->connected_terminal()->net();
-					if (!already_processed(connected_net))
-						process_net(connected_net);
-				}
+				for (std::size_t i = 0; i<groupspre.size() - 1; i++)
+					if (plib::container::contains(groupspre[i], &n))
+					{
+						// copy all nets
+						for (auto & cn : groupspre[i])
+							if (!plib::container::contains(groupspre.back(), cn))
+								groupspre.back().push_back(cn);
+						// clear
+						groupspre[i].clear();
+						return true;
+					}
 			}
+			// if it's already processed - no need to continue
+			if (!groupspre.empty() && plib::container::contains(groupspre.back(), &n))
+				return true;
+			return false;
 		}
 
-		void run(netlist_state_t &netlist)
+		void process_net(netlist_state_t &netlist, analog_net_t &n)
 		{
-			for (auto & net : netlist.nets())
+			// ignore empty nets. FIXME: print a warning message
+			netlist.log().verbose("Net {}", n.name());
+			if (n.has_connections())
 			{
-				netlist.log().debug("processing {1}\n", net->name());
-				if (!net->isRailNet() && net->num_cons() > 0)
+				// add the net
+				groupspre.back().push_back(&n);
+				// process all terminals connected to this net
+				for (auto &term : n.core_terms())
 				{
-					netlist.log().debug("   ==> not a rail net\n");
-					// Must be an analog net
-					auto &n = *static_cast<analog_net_t *>(net.get());
-					if (!already_processed(n))
+					netlist.log().verbose("Term {} {}", term->name(), static_cast<int>(term->type()));
+					// only process analog terminals
+					if (term->is_type(detail::terminal_type::TERMINAL))
 					{
-						groups.emplace_back(analog_net_t::list_t());
-						process_net(n);
+						auto *pt = static_cast<terminal_t *>(term);
+						// check the connected terminal
+						analog_net_t &connected_net = netlist.setup().get_connected_terminal(*pt)->net();
+						netlist.log().verbose("  Connected net {}", connected_net.name());
+						if (!check_if_processed_and_join(connected_net))
+							process_net(netlist, connected_net);
 					}
 				}
 			}
 		}
 
-		std::vector<analog_net_t::list_t> groups;
+		std::vector<analog_net_t::list_t> groupspre;
 	};
 
 	void NETLIB_NAME(solver)::post_start()
@@ -330,6 +326,7 @@ namespace devices
 #if (NL_USE_FLOAT_MATRIX)
 					ms = create_solvers<float>(sname, grp);
 #else
+					log().info("FPTYPE {1} not supported. Using DOUBLE", m_params.m_fp_type().name());
 					ms = create_solvers<double>(sname, grp);
 #endif
 					break;
@@ -340,13 +337,15 @@ namespace devices
 #if (NL_USE_LONG_DOUBLE_MATRIX)
 					ms = create_solvers<long double>(sname, grp);
 #else
+					log().info("FPTYPE {1} not supported. Using DOUBLE", m_params.m_fp_type().name());
 					ms = create_solvers<double>(sname, grp);
 #endif
 					break;
-				case solver::matrix_fp_type_e::FLOAT128:
+				case solver::matrix_fp_type_e::FLOATQ128:
 #if (NL_USE_FLOAT128)
-					ms = create_solvers<__float128>(sname, grp);
+					ms = create_solvers<FLOAT128>(sname, grp);
 #else
+					log().info("FPTYPE {1} not supported. Using DOUBLE", m_params.m_fp_type().name());
 					ms = create_solvers<double>(sname, grp);
 #endif
 					break;
@@ -354,8 +353,8 @@ namespace devices
 
 			log().verbose("Solver {1}", ms->name());
 			log().verbose("       ==> {1} nets", grp.size());
-			log().verbose("       has {1} elements", ms->has_dynamic_devices() ? "dynamic" : "no dynamic");
-			log().verbose("       has {1} elements", ms->has_timestep_devices() ? "timestep" : "no timestep");
+			log().verbose("       has {1} dynamic elements", ms->dynamic_device_count());
+			log().verbose("       has {1} timestep elements", ms->timestep_device_count());
 			for (auto &n : grp)
 			{
 				log().verbose("Net {1}", n->name());
@@ -366,20 +365,23 @@ namespace devices
 			}
 
 			m_mat_solvers_all.push_back(ms.get());
-			if (ms->has_timestep_devices())
+			if (ms->timestep_device_count() != 0)
 				m_mat_solvers_timestepping.push_back(ms.get());
 
 			m_mat_solvers.emplace_back(std::move(ms));
 		}
 	}
 
-	void NETLIB_NAME(solver)::create_solver_code(std::map<pstring, pstring> &mp)
+	solver::static_compile_container NETLIB_NAME(solver)::create_solver_code(solver::static_compile_target target)
 	{
+		solver::static_compile_container mp;
 		for (auto & s : m_mat_solvers)
 		{
-			auto r = s->create_solver_code();
-			mp[r.first] = r.second; // automatically overwrites identical names
+			auto r = s->create_solver_code(target);
+			if (r.first != "") // ignore solvers not supporting static compile
+				mp.push_back(r);
 		}
+		return mp;
 	}
 
 	NETLIB_DEVICE_IMPL(solver, "SOLVER", "FREQ")

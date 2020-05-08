@@ -95,7 +95,7 @@ namespace devices
 #endif
 			}
 			for (auto &q : m_Q)
-				if (q.has_net() && q.net().num_cons() > 0)
+				if (q.has_net() && q.net().has_connections())
 					active_outputs++;
 			set_active_outputs(active_outputs);
 		}
@@ -142,7 +142,7 @@ namespace devices
 		template<bool doOUT>
 		void process() noexcept
 		{
-			netlist_time mt(netlist_time::zero());
+			netlist_time_ext mt(netlist_time_ext::zero());
 			type_t nstate(0);
 			type_t ign(m_ign);
 

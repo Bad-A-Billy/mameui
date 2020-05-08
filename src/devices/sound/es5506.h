@@ -106,9 +106,9 @@ protected:
 
 	inline s32 interpolate(s32 sample1, s32 sample2, u64 accum);
 	inline void apply_filters(es550x_voice *voice, s32 &sample);
-	virtual inline void update_envelopes(es550x_voice *voice) {};
-	virtual inline void check_for_end_forward(es550x_voice *voice, u64 &accum) {};
-	virtual inline void check_for_end_reverse(es550x_voice *voice, u64 &accum) {};
+	virtual void update_envelopes(es550x_voice *voice) = 0;
+	virtual void check_for_end_forward(es550x_voice *voice, u64 &accum) = 0;
+	virtual void check_for_end_reverse(es550x_voice *voice, u64 &accum) = 0;
 	void generate_dummy(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
 	void generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
 	void generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
@@ -159,8 +159,8 @@ public:
 	es5506_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 	~es5506_device() {}
 
-	DECLARE_READ8_MEMBER(read);
-	DECLARE_WRITE8_MEMBER(write);
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
 	void voice_bank_w(int voice, int bank);
 
 protected:
@@ -176,9 +176,9 @@ protected:
 	virtual inline u32 get_ca(u32 control) override { return (control >> 10) & 7; }
 	virtual inline u32 get_lp(u32 control) override { return (control >> 8) & LP_MASK; }
 
-	virtual inline void update_envelopes(es550x_voice *voice) override;
-	virtual inline void check_for_end_forward(es550x_voice *voice, u64 &accum) override;
-	virtual inline void check_for_end_reverse(es550x_voice *voice, u64 &accum) override;
+	virtual void update_envelopes(es550x_voice *voice) override;
+	virtual void check_for_end_forward(es550x_voice *voice, u64 &accum) override;
+	virtual void check_for_end_reverse(es550x_voice *voice, u64 &accum) override;
 	virtual void generate_samples(s32 **outputs, int offset, int samples) override;
 
 private:
@@ -221,9 +221,9 @@ protected:
 	virtual inline u32 get_ca(u32 control) override { return (control >> 8) & 3; }
 	virtual inline u32 get_bank(u32 control) override { return (control >> 2) & 1; }
 
-	virtual inline void update_envelopes(es550x_voice *voice) override;
-	virtual inline void check_for_end_forward(es550x_voice *voice, u64 &accum) override;
-	virtual inline void check_for_end_reverse(es550x_voice *voice, u64 &accum) override;
+	virtual void update_envelopes(es550x_voice *voice) override;
+	virtual void check_for_end_forward(es550x_voice *voice, u64 &accum) override;
+	virtual void check_for_end_reverse(es550x_voice *voice, u64 &accum) override;
 	virtual void generate_samples(s32 **outputs, int offset, int samples) override;
 
 private:

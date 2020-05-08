@@ -39,12 +39,13 @@ namespace netlist
 
 	NETLIB_UPDATE_PARAM(r2r_dac)
 	{
-		solve_now();
-
 		nl_fptype V = m_VIN() / static_cast<nl_fptype>(1 << m_num())
 				* static_cast<nl_fptype>(m_val());
-
-		this->set_G_V_I(plib::reciprocal(m_R()), V, nlconst::zero());
+		change_state([this, &V]()
+			{
+				this->set_G_V_I(plib::reciprocal(m_R()), V, nlconst::zero());
+			}
+		);
 	}
 	} //namespace analog
 

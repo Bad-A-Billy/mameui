@@ -9,6 +9,7 @@
 ///
 
 #include "pconfig.h"
+#include "ptypes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -75,7 +76,7 @@ namespace plib
 		/// later.
 		///
 		template <typename V>
-		static inline constexpr const T magic(V &&v) noexcept { return static_cast<T>(v); }
+		static inline constexpr T magic(V &&v) noexcept { return static_cast<T>(v); }
 	};
 
 	/// \brief typesafe reciprocal function
@@ -246,90 +247,175 @@ namespace plib
 	/// FIXME: limited implementation
 	///
 	template <typename T1, typename T2>
-	static inline T1
-	pow(T1 v, T2 p) noexcept
+	static inline
+	auto pow(T1 v, T2 p) noexcept -> decltype(std::pow(v, p))
 	{
 		return std::pow(v, p);
 	}
 
 #if (PUSE_FLOAT128)
-	static inline constexpr __float128 reciprocal(__float128 v) noexcept
+	static inline constexpr FLOAT128 reciprocal(FLOAT128 v) noexcept
 	{
-		return constants<__float128>::one() / v;
+		return constants<FLOAT128>::one() / v;
 	}
 
-	static inline __float128 abs(__float128 v) noexcept
+	static inline FLOAT128 abs(FLOAT128 v) noexcept
 	{
 		return fabsq(v);
 	}
 
-	static inline __float128 sqrt(__float128 v) noexcept
+	static inline FLOAT128 sqrt(FLOAT128 v) noexcept
 	{
 		return sqrtq(v);
 	}
 
-	static inline __float128 hypot(__float128 v1, __float128 v2) noexcept
+	static inline FLOAT128 hypot(FLOAT128 v1, FLOAT128 v2) noexcept
 	{
 		return hypotq(v1, v2);
 	}
 
-	static inline __float128 exp(__float128 v) noexcept
+	static inline FLOAT128 exp(FLOAT128 v) noexcept
 	{
 		return expq(v);
 	}
 
-	static inline __float128 log(__float128 v) noexcept
+	static inline FLOAT128 log(FLOAT128 v) noexcept
 	{
 		return logq(v);
 	}
 
-	static inline __float128 tanh(__float128 v) noexcept
+	static inline FLOAT128 tanh(FLOAT128 v) noexcept
 	{
 		return tanhq(v);
 	}
 
-	static inline __float128 floor(__float128 v) noexcept
+	static inline FLOAT128 floor(FLOAT128 v) noexcept
 	{
 		return floorq(v);
 	}
 
-	static inline __float128 log1p(__float128 v) noexcept
+	static inline FLOAT128 log1p(FLOAT128 v) noexcept
 	{
 		return log1pq(v);
 	}
 
-	static inline __float128 sin(__float128 v) noexcept
+	static inline FLOAT128 sin(FLOAT128 v) noexcept
 	{
 		return sinq(v);
 	}
 
-	static inline __float128 cos(__float128 v) noexcept
+	static inline FLOAT128 cos(FLOAT128 v) noexcept
 	{
 		return cosq(v);
 	}
 
-	static inline __float128 trunc(__float128 v) noexcept
+	static inline FLOAT128 trunc(FLOAT128 v) noexcept
 	{
 		return truncq(v);
 	}
 
 	template <typename T>
-	static inline __float128 pow(__float128 v, T p) noexcept
+	static inline FLOAT128 pow(FLOAT128 v, T p) noexcept
 	{
-		return powq(v, static_cast<__float128>(p));
+		return powq(v, static_cast<FLOAT128>(p));
 	}
 
-	static inline __float128 pow(__float128 v, int p) noexcept
+	static inline FLOAT128 pow(FLOAT128 v, int p) noexcept
 	{
 		if (p==2)
 			return v*v;
 		else
-			return powq(v, static_cast<__float128>(p));
+			return powq(v, static_cast<FLOAT128>(p));
 	}
 
 #endif
 
-	static_assert(noexcept(constants<double>::one()) == true, "Not evaluated as constexpr");
+	/// \brief is argument a power of two?
+	///
+	/// \tparam T type of the argument
+	/// \param  v argument to be checked
+	/// \return true if argument is a power of two
+	///
+	template <typename T>
+	constexpr bool is_pow2(T v) noexcept
+	{
+		static_assert(is_integral<T>::value, "is_pow2 needs integer arguments");
+		return !(v & (v-1));
+	}
+
+	/// \brief return absolute value of signed argument
+	///
+	/// \tparam T type of the argument
+	/// \param  v argument
+	/// \return absolute value of argument
+	///
+	template<typename T>
+	constexpr
+	typename std::enable_if<plib::is_integral<T>::value && plib::is_signed<T>::value, T>::type
+	abs(T v) noexcept
+	{
+		return v < 0 ? -v : v;
+	}
+
+	/// \brief return absolute value of unsigned argument
+	///
+	/// \tparam T type of the argument
+	/// \param  v argument
+	/// \return argument since it has no sign
+	///
+	template<typename T>
+	constexpr
+	typename std::enable_if<plib::is_integral<T>::value && plib::is_unsigned<T>::value, T>::type
+	abs(T v) noexcept
+	{
+		return v;
+	}
+
+	/// \brief return greatest common denominator
+	///
+	/// Function returns the greatest common denominator of m and n. For known
+	/// arguments, this function also works at compile time.
+	///
+	/// \tparam M type of the first argument
+	/// \tparam N type of the second argument
+	/// \param  m first argument
+	/// \param  n first argument
+	/// \return greatest common denominator of m and n
+	///
+	template<typename M, typename N>
+	constexpr typename std::common_type<M, N>::type
+	gcd(M m, N n) noexcept
+	{
+		static_assert(plib::is_integral<M>::value, "gcd: M must be an integer");
+		static_assert(plib::is_integral<N>::value, "gcd: N must be an integer");
+
+		return m == 0 ? plib::abs(n)
+			 : n == 0 ? plib::abs(m)
+			 : gcd(n, m % n);
+	}
+
+	/// \brief return least common multiple
+	///
+	/// Function returns the least common multiple of m and n. For known
+	/// arguments, this function also works at compile time.
+	///
+	/// \tparam M type of the first argument
+	/// \tparam N type of the second argument
+	/// \param  m first argument
+	/// \param  n first argument
+	/// \return least common multiple of m and n
+	///
+	template<typename M, typename N>
+	constexpr typename std::common_type<M, N>::type
+	lcm(M m, N n) noexcept
+	{
+		static_assert(plib::is_integral<M>::value, "lcm: M must be an integer");
+		static_assert(plib::is_integral<N>::value, "lcm: N must be an integer");
+
+		return (m != 0 && n != 0) ? (plib::abs(m) / gcd(m, n)) * plib::abs(n) : 0;
+	}
+
+	static_assert(noexcept(constants<double>::one()), "Not evaluated as constexpr");
 
 } // namespace plib
 

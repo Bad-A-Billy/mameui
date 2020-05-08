@@ -13,7 +13,7 @@
 #include "speaker.h"
 #include "debug/debugcpu.h"
 
-#include <string.h>
+#include <cstring>
 
 
 //**************************************************************************
@@ -84,7 +84,6 @@ emu::detail::device_registrar const registered_device_types;
 
 device_t::device_t(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock)
 	: m_type(type)
-	, m_searchpath(type.shortname())
 	, m_owner(owner)
 	, m_next(nullptr)
 
@@ -123,6 +122,24 @@ device_t::~device_t()
 
 
 //-------------------------------------------------
+//  searchpath - get the media search path for a
+//  device
+//-------------------------------------------------
+
+std::vector<std::string> device_t::searchpath() const
+{
+	std::vector<std::string> result;
+	device_t const *system(owner());
+	while (system && !dynamic_cast<driver_device const *>(system))
+		system = system->owner();
+	if (system)
+		result = system->searchpath();
+	result.emplace(result.begin(), shortname());
+	return result;
+}
+
+
+//-------------------------------------------------
 //  memregion - return a pointer to the region
 //  info for a given region
 //-------------------------------------------------
@@ -130,7 +147,7 @@ device_t::~device_t()
 memory_region *device_t::memregion(std::string _tag) const
 {
 	// build a fully-qualified name and look it up
-	auto search = machine().memory().regions().find(subtag(_tag).c_str());
+	auto search = machine().memory().regions().find(subtag(std::move(_tag)));
 	if (search != machine().memory().regions().end())
 		return search->second.get();
 	else
@@ -146,7 +163,7 @@ memory_region *device_t::memregion(std::string _tag) const
 memory_share *device_t::memshare(std::string _tag) const
 {
 	// build a fully-qualified name and look it up
-	auto search = machine().memory().shares().find(subtag(_tag).c_str());
+	auto search = machine().memory().shares().find(subtag(std::move(_tag)));
 	if (search != machine().memory().shares().end())
 		return search->second.get();
 	else
@@ -161,7 +178,7 @@ memory_share *device_t::memshare(std::string _tag) const
 
 memory_bank *device_t::membank(std::string _tag) const
 {
-	auto search = machine().memory().banks().find(subtag(_tag).c_str());
+	auto search = machine().memory().banks().find(subtag(std::move(_tag)));
 	if (search != machine().memory().banks().end())
 		return search->second.get();
 	else
@@ -177,7 +194,7 @@ memory_bank *device_t::membank(std::string _tag) const
 ioport_port *device_t::ioport(std::string tag) const
 {
 	// build a fully-qualified name and look it up
-	return machine().ioport().port(subtag(tag).c_str());
+	return machine().ioport().port(subtag(std::move(tag)).c_str());
 }
 
 
