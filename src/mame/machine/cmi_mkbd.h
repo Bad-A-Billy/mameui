@@ -56,7 +56,7 @@ private:
 	DECLARE_WRITE_LINE_MEMBER( kbd_txd_w );
 	DECLARE_WRITE_LINE_MEMBER( kbd_rts_w );
 
-	template <unsigned N> DECLARE_WRITE16_MEMBER( update_dp );
+	template <unsigned N> void update_dp(offs_t offset, u16 data);
 
 	void muskeys_map(address_map &map);
 
@@ -76,6 +76,7 @@ private:
 
 	required_ioport m_keypad_a_port;
 	required_ioport m_keypad_b_port;
+	required_ioport m_analog;
 
 	required_ioport_array<3> m_key_mux_ports[4];
 

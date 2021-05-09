@@ -79,7 +79,6 @@
 
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
-#include "sound/volt_reg.h"
 #include "speaker.h"
 
 
@@ -370,11 +369,6 @@ void ad_59mc07_device::device_add_mconfig(machine_config &config)
 
 	DAC_6BIT_R2R(config, m_dac_1, 0).add_route(ALL_OUTPUTS, "speaker", 0.5); // unknown DAC
 	DAC_6BIT_R2R(config, m_dac_2, 0).add_route(ALL_OUTPUTS, "speaker", 0.5); // unknown DAC
-	voltage_regulator_device &vref(VOLTAGE_REGULATOR(config, "vref", 0));
-	vref.add_route(0, "dac1", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac1", -1.0, DAC_VREF_NEG_INPUT);
-	vref.add_route(0, "dac2", 1.0, DAC_VREF_POS_INPUT);
-	vref.add_route(0, "dac2", -1.0, DAC_VREF_NEG_INPUT);
 
 	SAMPLES(config, m_samples);
 	m_samples->set_channels(3);
@@ -432,9 +426,13 @@ void ad_59mc07_device::device_reset()
 /*
     Functions to emulate the Alpha Denshi "60MC01" audio board
 
-    CPU  :Z80A
-    Sound:AY-3-8910A (unpopulated: another 8910 and a YM2203)
-    OSC  :16.000MHz
+    CPU  : Z80A
+    Sound: AY-3-8910A (unpopulated: another 8910 and a YM2203)
+    OSC  : 16.000MHz
+
+    TODO: This bears a lot of similarities with the Super Stingray audio board. Verify if PCB codes match and if so merge implementations;
+          fix interrupts;
+          is there really no music?
 */
 
 //**************************************************************************
@@ -449,19 +447,21 @@ DEFINE_DEVICE_TYPE(AD_60MC01, ad_60mc01_device, "ad_60mc01", "Alpha Denshi 60MC0
 //  MEMORY MAPS
 //**************************************************************************
 
-void ad_60mc01_device::sound_map(address_map &map) // TODO: verify everything
+void ad_60mc01_device::sound_map(address_map &map)
 {
 	map(0x0000, 0x1fff).rom();
 	map(0x8000, 0x87ff).ram();
-	// map(0xc100, 0xc100).r(m_soundlatch, FUNC(generic_latch_8_device::read));
-	// map(0xc102, 0xc102).w(m_soundlatch, FUNC(generic_latch_8_device::clear_w));
+	map(0xc100, 0xc100).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0xc102, 0xc102).w(m_soundlatch, FUNC(generic_latch_8_device::clear_w));
+	map(0xc104, 0xc104).nopw(); // written at start up, would be DAC if it were populated
+	map(0xc106, 0xc10e).nopw(); // written continuously, it's audio board I/O according to Super Stingray's emulation
 }
 
 void ad_60mc01_device::sound_portmap(address_map &map)
 {
 	map.global_mask(0xff);
-	// map(0x10, 0x11).w("aysnd", FUNC(ay8910_device::data_address_w));
-	// map(0x80, 0x81).w
+	map(0x10, 0x11).nopw(); // written at start up, would be the YM2203 if it were populated
+	map(0x80, 0x81).w("aysnd", FUNC(ay8910_device::data_address_w));
 }
 
 //**************************************************************************
@@ -487,6 +487,7 @@ void ad_60mc01_device::device_add_mconfig(machine_config &config)
 	Z80(config, m_audiocpu, 16_MHz_XTAL / 4); // divider not verified
 	m_audiocpu->set_addrmap(AS_PROGRAM, &ad_60mc01_device::sound_map);
 	m_audiocpu->set_addrmap(AS_IO, &ad_60mc01_device::sound_portmap);
+	m_audiocpu->set_periodic_int(FUNC(ad_60mc01_device::sound_irq), attotime::from_hz(128));
 
 	// sound hardware
 	SPEAKER(config, "speaker").front_center();

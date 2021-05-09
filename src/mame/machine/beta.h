@@ -56,8 +56,12 @@ private:
 	required_device<floppy_connector> m_floppy1;
 	required_device<floppy_connector> m_floppy2;
 	required_device<floppy_connector> m_floppy3;
+	void fdc_hld_w(int state);
+	void motors_control();
+	u8 m_control;
+	bool m_motor_active;
 
-	DECLARE_FLOPPY_FORMATS(floppy_formats);
+	static void floppy_formats(format_registration &fr);
 };
 
 DECLARE_DEVICE_TYPE(BETA_DISK, beta_disk_device)

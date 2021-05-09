@@ -2,7 +2,7 @@
 //************************************************************************************************
 // MASTER
 //
-//  newui.c - This is the NEWUI Windows dropdown menu system
+//  newui.cpp - This is the NEWUI Windows dropdown menu system
 //
 //  known bugs:
 //  -  Unable to modify keyboard or joystick. Last known to be working in 0.158 .
@@ -12,6 +12,11 @@
 //************************************************************************************************
 
 // Set minimum windows version to XP
+#ifdef WINVER
+#undef WINVER
+#endif
+#define WINVER 0x501
+
 #ifdef _WIN32_WINNT
 #undef _WIN32_WINNT
 #endif
@@ -59,12 +64,6 @@ struct dialog_layout
 typedef void (*dialog_itemstoreval)(void *param, int val);
 typedef void (*dialog_itemchangedproc)(dialog_box *dialog, HWND dlgitem, void *changed_param);
 typedef void (*dialog_notification)(dialog_box *dialog, HWND dlgwnd, NMHDR *notification, void *param);
-
-#ifdef UNICODE
-#define win_dialog_tcsdup win_dialog_wcsdup
-#else
-#define win_dialog_tcsdup win_dialog_strdup
-#endif
 
 #define SEQWM_SETFOCUS  (WM_APP + 0)
 #define SEQWM_KILLFOCUS (WM_APP + 1)
@@ -251,7 +250,7 @@ enum
 //  LOCAL STRING FUNCTIONS (these require free after being called)
 //========================================================================
 
-static WCHAR *ui_wstring_from_utf8(const char *utf8string)
+static WCHAR *newui_wstring_from_utf8(const char *utf8string)
 {
 	int char_count;
 	WCHAR *result;
@@ -265,7 +264,7 @@ static WCHAR *ui_wstring_from_utf8(const char *utf8string)
 	return result;
 }
 
-static char *ui_utf8_from_wstring(const WCHAR *wstring)
+static char *newui_utf8_from_wstring(const WCHAR *wstring)
 {
 	int char_count;
 	char *result;
@@ -279,13 +278,12 @@ static char *ui_utf8_from_wstring(const WCHAR *wstring)
 }
 
 // This function truncates a long string, replacing the end with ...
-static std::string longdots(std::string incoming, uint16_t howmany)
+static std::string newui_longdots(std::string incoming, uint16_t howmany)
 {
-	// Firstly, find out if it's multi-line text
-	size_t i = incoming.find_first_of("\n");
-	// If so, truncate at first newline
-	if (i != std::string::npos)
-		incoming = incoming.substr(0, i);
+	// change all newlines to spaces
+	for (int i = 0; i < incoming.size(); i++)
+		if (incoming[i] == '\n')
+			incoming[i] = ' ';
 	// Now assume all is ok
 	std::string outgoing = incoming;
 	// But if it's too long, replace the excess with dots
@@ -317,7 +315,7 @@ static BOOL win_get_file_name_dialog(win_open_file_name *ofn)
 	// do we have to translate the filter?
 	if (ofn->filter)
 	{
-		buffer = ui_wstring_from_utf8(ofn->filter);
+		buffer = newui_wstring_from_utf8(ofn->filter);
 		if (!buffer)
 			goto done;
 
@@ -333,7 +331,7 @@ static BOOL win_get_file_name_dialog(win_open_file_name *ofn)
 	// do we need to translate the file parameter?
 	if (ofn->filename)
 	{
-		buffer = ui_wstring_from_utf8(ofn->filename);
+		buffer = newui_wstring_from_utf8(ofn->filename);
 		if (!buffer)
 			goto done;
 
@@ -346,7 +344,7 @@ static BOOL win_get_file_name_dialog(win_open_file_name *ofn)
 	// do we need to translate the initial directory?
 	if (ofn->initial_directory)
 	{
-		t_initial_directory = ui_wstring_from_utf8(ofn->initial_directory);
+		t_initial_directory = newui_wstring_from_utf8(ofn->initial_directory);
 		if (t_initial_directory == NULL)
 			goto done;
 	}
@@ -390,11 +388,11 @@ static BOOL win_get_file_name_dialog(win_open_file_name *ofn)
 	// copy file back out into passed structure
 	if (t_file)
 	{
-		utf8_file = ui_utf8_from_wstring(t_file);
+		utf8_file = newui_utf8_from_wstring(t_file);
 		if (!utf8_file)
 			goto done;
 
-		snprintf(ofn->filename, ARRAY_LENGTH(ofn->filename), "%s", utf8_file);
+		snprintf(ofn->filename, std::size(ofn->filename), "%s", utf8_file);
 		free(utf8_file);
 	}
 
@@ -484,7 +482,7 @@ static BOOL win_append_menu_utf8(HMENU menu, UINT flags, UINT_PTR id, const char
 	// only convert string when it's not a bitmap
 	if (!(flags & MF_BITMAP) && item)
 	{
-		t_str = ui_wstring_from_utf8(item);
+		t_str = newui_wstring_from_utf8(item);
 		t_item = t_str;
 	}
 
@@ -597,7 +595,7 @@ static void win_dialog_exit(dialog_box *dialog)
 	objpool = dialog->objpool;
 	if (objpool)
 	{
-		for (i = 0; i < ARRAY_LENGTH(objpool->objects); i++)
+		for (i = 0; i < std::size(objpool->objects); i++)
 			DeleteObject(objpool->objects[i]);
 	}
 
@@ -646,7 +644,7 @@ dialog_box *win_dialog_init(const char *title, const struct dialog_layout *layou
 	if (dialog_write(di, w, sizeof(w), 2))
 		goto error;
 
-	w_title = ui_wstring_from_utf8(title);
+	w_title = newui_wstring_from_utf8(title);
 	rc = dialog_write_string(di, w_title);
 	free(w_title);
 	if (rc)
@@ -861,7 +859,7 @@ static int dialog_write_item(dialog_box *di, DWORD style, short x, short y, shor
 	if (dialog_write(di, class_name, class_name_length, 2))
 		return 1;
 
-	w_str = str ? ui_wstring_from_utf8(str) : NULL;
+	w_str = str ? newui_wstring_from_utf8(str) : NULL;
 	rc = dialog_write_string(di, w_str);
 	if (w_str)
 		free(w_str);
@@ -1007,7 +1005,7 @@ static LRESULT dialog_get_combo_value(dialog_box *dialog, HWND dialog_item, UINT
 static LRESULT dialog_get_adjuster_value(dialog_box *dialog, HWND dialog_item, UINT message, WPARAM wparam, LPARAM lparam)
 {
 	TCHAR buf[32];
-	GetWindowText(dialog_item, buf, ARRAY_LENGTH(buf)-1);
+	GetWindowText(dialog_item, buf, std::size(buf)-1);
 	return _ttoi(buf);
 }
 
@@ -1058,21 +1056,6 @@ static LRESULT dialog_combo_changed(dialog_box *dialog, HWND dlgitem, UINT messa
 	dialog_itemchangedproc changed = (dialog_itemchangedproc) wparam;
 	changed(dialog, dlgitem, (void *) lparam);
 	return 0;
-}
-
-
-
-//============================================================
-//  win_dialog_wcsdup
-//    called from win_dialog_add_adjuster (via define)
-//============================================================
-
-static WCHAR *win_dialog_wcsdup(dialog_box *dialog, const WCHAR *s)
-{
-	WCHAR *result = global_alloc_array(WCHAR, wcslen(s) + 1);
-	if (result)
-		wcscpy(result, s);
-	return result;
 }
 
 
@@ -1246,7 +1229,7 @@ static LRESULT adjuster_sb_setup(dialog_box *dialog, HWND sbwnd, UINT message, W
 	struct adjuster_sb_stuff *stuff;
 	LONG_PTR l;
 
-	stuff = global_alloc(adjuster_sb_stuff);
+	stuff = new adjuster_sb_stuff;
 	if (!stuff)
 		return 1;
 	stuff->min_value = (WORD) (lparam >> 0);
@@ -1273,7 +1256,7 @@ static int win_dialog_add_adjuster(dialog_box *dialog, const char *item_label, i
 	short x;
 	short y;
 	TCHAR buf[32];
-	TCHAR *s;
+	TCHAR *s = new TCHAR[33];
 
 	dialog_new_control(dialog, &x, &y);
 
@@ -1288,8 +1271,8 @@ static int win_dialog_add_adjuster(dialog_box *dialog, const char *item_label, i
 		goto error;
 	x += dialog->layout->combo_width - DIM_ADJUSTER_SCR_WIDTH;
 
-	_sntprintf(buf, ARRAY_LENGTH(buf), is_percentage ? TEXT("%d%%") : TEXT("%d"), default_value);
-	s = win_dialog_tcsdup(dialog, buf);
+	_sntprintf(buf, std::size(buf), is_percentage ? TEXT("%d%%") : TEXT("%d"), default_value);
+	_tcscpy(s, buf);
 
 	if (!s)
 		return 1;
@@ -1765,13 +1748,13 @@ static BOOL win_file_dialog(running_machine &machine, HWND parent, win_file_dial
 	if (dlgtype == WIN_FILE_DIALOG_OPEN)
 		ofn.flags |= OFN_FILEMUSTEXIST;
 
-	snprintf(ofn.filename, ARRAY_LENGTH(ofn.filename), "%s", filename);
+	snprintf(ofn.filename, std::size(ofn.filename), "%s", filename);
 
 	before_display_dialog(machine);
 	result = win_get_file_name_dialog(&ofn);
 	after_display_dialog(machine);
 
-	snprintf(filename, ARRAY_LENGTH(ofn.filename), "%s", ofn.filename);
+	snprintf(filename, std::size(ofn.filename), "%s", ofn.filename);
 	return result;
 }
 
@@ -2122,15 +2105,15 @@ static void customise_analogcontrols(running_machine &machine, HWND wnd)
 				name = field.name();
 				afield = &field;
 
-				_snprintf(buf, ARRAY_LENGTH(buf)-1, "%s %s", name, "Digital Speed");
+				_snprintf(buf, std::size(buf)-1, "%s %s", name, "Digital Speed");
 				if (win_dialog_add_adjuster(dlg, buf, settings.delta, 1, 255, false, store_delta, (void *) afield))
 					goto done;
 
-				_snprintf(buf, ARRAY_LENGTH(buf)-1, "%s %s", name, "Autocenter Speed");
+				_snprintf(buf, std::size(buf)-1, "%s %s", name, "Autocenter Speed");
 				if (win_dialog_add_adjuster(dlg, buf, settings.centerdelta, 0, 255, false, store_centerdelta, (void *) afield))
 					goto done;
 
-				_snprintf(buf, ARRAY_LENGTH(buf)-1, "%s %s", name, "Reverse");
+				_snprintf(buf, std::size(buf)-1, "%s %s", name, "Reverse");
 				if (win_dialog_add_combobox(dlg, buf, settings.reverse ? 1 : 0, store_reverse, (void *) afield))
 					goto done;
 				if (win_dialog_add_combobox_item(dlg, "Off", 0))
@@ -2138,7 +2121,7 @@ static void customise_analogcontrols(running_machine &machine, HWND wnd)
 				if (win_dialog_add_combobox_item(dlg, "On", 1))
 					goto done;
 
-				_snprintf(buf, ARRAY_LENGTH(buf)-1, "%s %s", name, "Sensitivity");
+				_snprintf(buf, std::size(buf)-1, "%s %s", name, "Sensitivity");
 				if (win_dialog_add_adjuster(dlg, buf, settings.sensitivity, 1, 255, true, store_sensitivity, (void *) afield))
 					goto done;
 			}
@@ -2214,9 +2197,9 @@ static void state_dialog(HWND wnd, win_file_dialog_type dlgtype, DWORD fileproc_
 	ofn.initial_directory = dir;
 
 	if (!core_filename_ends_with(ofn.filename, "sta"))
-		snprintf(ofn.filename, ARRAY_LENGTH(ofn.filename), "%s.sta", state_filename);
+		snprintf(ofn.filename, std::size(ofn.filename), "%s.sta", state_filename);
 	else
-		snprintf(ofn.filename, ARRAY_LENGTH(ofn.filename), "%s", state_filename);
+		snprintf(ofn.filename, std::size(ofn.filename), "%s", state_filename);
 
 	BOOL result = win_get_file_name_dialog(&ofn);
 
@@ -2224,9 +2207,9 @@ static void state_dialog(HWND wnd, win_file_dialog_type dlgtype, DWORD fileproc_
 	{
 		// the core doesn't add the extension if it's an absolute path
 		if (osd_is_absolute_path(ofn.filename) && !core_filename_ends_with(ofn.filename, "sta"))
-			snprintf(state_filename, ARRAY_LENGTH(state_filename), "%s.sta", ofn.filename);
+			snprintf(state_filename, std::size(state_filename), "%s.sta", ofn.filename);
 		else
-			snprintf(state_filename, ARRAY_LENGTH(state_filename), "%s", ofn.filename);
+			snprintf(state_filename, std::size(state_filename), "%s", ofn.filename);
 
 		if (is_load)
 			machine.schedule_load(state_filename);
@@ -2348,18 +2331,19 @@ static bool get_softlist_info(HWND wnd, device_image_interface *img)
 	win_window_info *window = (win_window_info *)ptr;
 
 	/* Get the media_path */
-	char rompath[2048];
+	char rompath[strlen(window->machine().options().emu_options::media_path())+2];
+	memset(rompath, '\0', sizeof(rompath));
 	strcpy(rompath, window->machine().options().emu_options::media_path());
 
 	// Get the path to suitable software
-	for (software_list_device &swlist : software_list_device_iterator(window->machine().root_device()))
+	for (software_list_device &swlist : software_list_device_enumerator(window->machine().root_device()))
 	{
 		for (const software_info &swinfo : swlist.get_info())
 		{
 			const software_part &part = swinfo.parts().front();
 			if (swlist.is_compatible(part) == SOFTWARE_IS_COMPATIBLE)
 			{
-				for (device_image_interface &image : image_interface_iterator(window->machine().root_device()))
+				for (device_image_interface &image : image_interface_enumerator(window->machine().root_device()))
 				{
 					if (!image.user_loadable())
 						continue;
@@ -2384,7 +2368,7 @@ static bool get_softlist_info(HWND wnd, device_image_interface *img)
 		while (sl_root && !passes_tests)
 		{
 			std::string test_path = sl_root + sl_dir;
-			TCHAR *szPath = ui_wstring_from_utf8(test_path.c_str());
+			TCHAR *szPath = newui_wstring_from_utf8(test_path.c_str());
 			DWORD dwAttrib = GetFileAttributes(szPath);
 			if ((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY))
 			{
@@ -2409,7 +2393,8 @@ static void change_device(HWND wnd, device_image_interface *image, bool is_save)
 {
 	// Get the path for loose software from <gamename>.ini
 	// if this is invalid, then windows chooses whatever directory it used last.
-	char buf[2048];
+	char buf[strlen(image->device().machine().options().emu_options::sw_path())+2];
+	memset(buf, '\0', sizeof(buf));
 	strcpy(buf, image->device().machine().options().emu_options::sw_path());
 	// This pulls out the first path from a multipath field
 	const char* t1 = strtok(buf, ";");
@@ -2430,11 +2415,14 @@ static void change_device(HWND wnd, device_image_interface *image, bool is_save)
 		initial_dir.erase(initial_dir.length()-1);
 
 	// file name
-	char filename[512];
+	uint16_t filesz = 0;
 	if (image->exists())
+		filesz = strlen(image->basename());
+
+	char filename[16384];
+	memset(filename, '\0', sizeof(filename));
+	if (filesz)
 		strcpy(filename, image->basename());
-	else
-		filename[0] = '\0';
 
 	// build a normal filter
 	std::string filter;
@@ -2475,7 +2463,7 @@ static void load_item(HWND wnd, device_image_interface *img, bool is_save)
 	build_generic_filter(NULL, is_save, filter);
 
 	// display the dialog
-	char filename[512] = "";
+	char filename[16384] = "";
 	bool result = win_file_dialog(img->device().machine(), wnd, WIN_FILE_DIALOG_OPEN, filter.c_str(), as.c_str(), filename);
 
 	if (result)
@@ -2562,12 +2550,12 @@ static HMENU find_sub_menu(HMENU menu, const char *menutext, bool create_sub_men
 
 	while(*menutext)
 	{
-		TCHAR *t_menutext = ui_wstring_from_utf8(menutext);
+		TCHAR *t_menutext = newui_wstring_from_utf8(menutext);
 
 		int i = -1;
 		do
 		{
-			if (!get_menu_item_string(menu, ++i, true, &sub_menu, buf, ARRAY_LENGTH(buf)))
+			if (!get_menu_item_string(menu, ++i, true, &sub_menu, buf, std::size(buf)))
 			{
 				free(t_menutext);
 				return NULL;
@@ -2649,7 +2637,7 @@ static void setup_joystick_menu(running_machine &machine, HMENU menu_bar)
 	{
 		for (int i = 0; i < joystick_count; i++)
 		{
-			snprintf(buf, ARRAY_LENGTH(buf), "Joystick %i", i + 1);
+			snprintf(buf, std::size(buf), "Joystick %i", i + 1);
 			win_append_menu_utf8(joystick_menu, MF_STRING, ID_JOYSTICK_0 + i, buf);
 			child_count++;
 		}
@@ -2710,7 +2698,7 @@ static void prepare_menus(HWND wnd)
 
 	int frameskip = window->machine().video().frameskip();
 
-	int orientation = window->m_target->orientation();
+	int orientation = window->target()->orientation();
 
 	int speed = window->machine().video().throttled() ? window->machine().video().speed_factor() : 0;
 
@@ -2745,7 +2733,7 @@ static void prepare_menus(HWND wnd)
 		set_command_state(menu_bar, ID_FILE_SAVESTATE, MFS_GRAYED);
 	}
 
-	set_command_state(menu_bar, ID_EDIT_PASTE, window->machine().ioport().natkeyboard().can_post() ? MFS_ENABLED : MFS_GRAYED);
+	set_command_state(menu_bar, ID_EDIT_PASTE, window->machine().natkeyboard().can_post() ? MFS_ENABLED : MFS_GRAYED);
 
 	set_command_state(menu_bar, ID_OPTIONS_PAUSE, winwindow_ui_is_paused(window->machine()) ? MFS_CHECKED : MFS_ENABLED);
 	set_command_state(menu_bar, ID_OPTIONS_CONFIGURATION, has_config ? MFS_ENABLED : MFS_GRAYED);
@@ -2756,8 +2744,8 @@ static void prepare_menus(HWND wnd)
 	set_command_state(menu_bar, ID_OPTIONS_TOGGLEFPS, mame_machine_manager::instance()->ui().show_fps() ? MFS_CHECKED : MFS_ENABLED);
 	set_command_state(menu_bar, ID_FILE_UIACTIVE, has_keyboard ? (window->machine().ui_active() ? MFS_CHECKED : MFS_ENABLED): MFS_CHECKED | MFS_GRAYED);
 
-	set_command_state(menu_bar, ID_KEYBOARD_EMULATED, has_keyboard ? (!window->machine().ioport().natkeyboard().in_use() ? MFS_CHECKED : MFS_ENABLED): MFS_GRAYED);
-	set_command_state(menu_bar, ID_KEYBOARD_NATURAL, (has_keyboard && window->machine().ioport().natkeyboard().can_post()) ? (window->machine().ioport().natkeyboard().in_use() ? MFS_CHECKED : MFS_ENABLED): MFS_GRAYED);
+	set_command_state(menu_bar, ID_KEYBOARD_EMULATED, has_keyboard ? (!window->machine().natkeyboard().in_use() ? MFS_CHECKED : MFS_ENABLED): MFS_GRAYED);
+	set_command_state(menu_bar, ID_KEYBOARD_NATURAL, (has_keyboard && window->machine().natkeyboard().can_post()) ? (window->machine().natkeyboard().in_use() ? MFS_CHECKED : MFS_ENABLED): MFS_GRAYED);
 	set_command_state(menu_bar, ID_KEYBOARD_CUSTOMIZE, has_keyboard ? MFS_ENABLED : MFS_GRAYED);
 
 	set_command_state(menu_bar, ID_VIDEO_ROTATE_0, (orientation == ROT0) ? MFS_CHECKED : MFS_ENABLED);
@@ -2782,7 +2770,7 @@ static void prepare_menus(HWND wnd)
 	HMENU video_menu = find_sub_menu(menu_bar, "&Options\0&Video\0", false);
 	do
 	{
-		get_menu_item_string(video_menu, 0, true, NULL, t_buf, ARRAY_LENGTH(t_buf));
+		get_menu_item_string(video_menu, 0, true, NULL, t_buf, std::size(t_buf));
 		if (_tcscmp(t_buf, TEXT("-")))
 			RemoveMenu(video_menu, 0, MF_BYPOSITION);
 	}
@@ -2790,10 +2778,10 @@ static void prepare_menus(HWND wnd)
 
 	i = 0;
 	const char *view_name;
-	int view_index = window->m_target->view();
-	while((view_name = window->m_target->view_name(i)))
+	int view_index = window->target()->view();
+	while((view_name = window->target()->view_name(i)))
 	{
-		TCHAR *t_view_name = ui_wstring_from_utf8(view_name);
+		TCHAR *t_view_name = newui_wstring_from_utf8(view_name);
 		InsertMenu(video_menu, i, MF_BYPOSITION | (i == view_index ? MF_CHECKED : 0), ID_VIDEO_VIEW_0 + i, t_view_name);
 		free(t_view_name);
 		i++;
@@ -2810,9 +2798,12 @@ static void prepare_menus(HWND wnd)
 	bool usage_shown = false;
 	int cnt = 0;
 	// then set up the actual devices
-	for (device_image_interface &img : image_interface_iterator(window->machine().root_device()))
+	for (device_image_interface &img : image_interface_enumerator(window->machine().root_device()))
 	{
 		if (!img.user_loadable())
+			continue;
+
+		if (!img.device().machine().options().has_image_option(img.instance_name()))
 			continue;
 
 		new_item = ID_DEVICE_0 + (cnt * DEVOPTION_MAX);
@@ -2846,7 +2837,7 @@ static void prepare_menus(HWND wnd)
 						{
 							if (flist.name() == "usage" && !usage_shown)
 							{
-								std::string usage = "Usage: " + longdots(flist.value(),200);
+								std::string usage = "Usage: " + newui_longdots(flist.value(),200);
 								win_append_menu_utf8(sub_menu, MF_STRING, 0, usage.c_str());
 								win_append_menu_utf8(sub_menu, MF_SEPARATOR, 0, NULL);
 								usage_shown = true;
@@ -2863,7 +2854,7 @@ static void prepare_menus(HWND wnd)
 								// if not, we simply display "part_name"; if yes we display "part_name (part_id)"
 								std::string menu_part_name(swpart.name());
 								if (swpart.feature("part_id"))
-									menu_part_name.append(": ").append(longdots(swpart.feature("part_id"),50));
+									menu_part_name.append(": ").append(newui_longdots(swpart.feature("part_id"),50));
 								win_append_menu_utf8(sub_menu, MF_STRING, new_switem + ID_SWPART, menu_part_name.c_str());
 								part_map[new_switem] = part_data{ swpart.name(), &img };
 								new_switem++;
@@ -2925,7 +2916,7 @@ static void prepare_menus(HWND wnd)
 					filename.append(" (").append(tmp->name());
 					// also check if this part has a specific part_id (e.g. "Map Disc", "Bonus Disc", etc.), and in case display it
 					if (img.get_feature("part_id"))
-						filename.append(": ").append(longdots(img.get_feature("part_id"),50));
+						filename.append(": ").append(newui_longdots(img.get_feature("part_id"),50));
 					filename.append(")");
 				}
 			}
@@ -2934,7 +2925,7 @@ static void prepare_menus(HWND wnd)
 			filename.assign("---");
 
 		// Get instance names instead, like Media View, and mame's File Manager
-		std::string instance = img.instance_name() + std::string(" (") + img.brief_instance_name() + std::string("): ") + longdots(filename,127);
+		std::string instance = img.instance_name() + std::string(" (") + img.brief_instance_name() + std::string("): ") + newui_longdots(filename,127);
 		std::transform(instance.begin(), instance.begin()+1, instance.begin(), ::toupper); // turn first char to uppercase
 		win_append_menu_utf8(device_menu, MF_POPUP, (UINT_PTR)sub_menu, instance.c_str());
 
@@ -2946,7 +2937,7 @@ static void prepare_menus(HWND wnd)
 	remove_menu_items(slot_menu);
 	cnt = 3400;
 	// cycle through all slots for this system
-	for (device_slot_interface &slot : slot_interface_iterator(window->machine().root_device()))
+	for (device_slot_interface &slot : slot_interface_enumerator(window->machine().root_device()))
 	{
 		if (slot.fixed())
 			continue;
@@ -3090,8 +3081,16 @@ static void device_command(HWND wnd, device_image_interface *img, int devoption)
 			break;
 
 		case DEVOPTION_CLOSE:
+		{
+			std::string t = img->instance_name();
 			img->unload();
 			img->device().machine().options().image_option(img->instance_name()).specify("");
+			// Some cartridges have their own extra slot. When the cart is removed we need to restart to remove the slot too.
+			// This could fail if the system normally has 2 slots.
+			if (!img->device().machine().options().has_image_option(t))
+				img->device().machine().schedule_hard_reset();
+		}
+
 			//img->device().machine().options().emu_options::set_value(img->instance_name().c_str(), "", OPTION_PRIORITY_CMDLINE);
 			break;
 
@@ -3167,7 +3166,7 @@ static void help_display(HWND wnd, const char *chapter)
 	if (!is_windowed())
 		winwindow_toggle_full_screen();
 
-	TCHAR *t_chapter = ui_wstring_from_utf8(chapter);
+	TCHAR *t_chapter = newui_wstring_from_utf8(chapter);
 //	htmlhelp(wnd, t_chapter, 0 /*HH_DISPLAY_TOPIC*/, 0);
 //	TCHAR *szSite = new TCHAR[100];
 //	_tcscpy(szSite, TEXT("http://messui.polygonal-moogle.com/onlinehelp/"));
@@ -3201,10 +3200,10 @@ static void help_about_mess(HWND wnd)
 static void help_about_thissystem(running_machine &machine, HWND wnd)
 {
 	char buf[100];
-//	snprintf(buf, ARRAY_LENGTH(buf), "mess.chm::/sysinfo/%s.htm", machine.system().name);
-//	snprintf(buf, ARRAY_LENGTH(buf), "http://messui.polygonal-moogle.com/onlinehelp/%s.html", machine.system().name);
-//	snprintf(buf, ARRAY_LENGTH(buf), "http://www.progettoemma.net/mess/system.php?machine=%s", machine.system().name);
-	snprintf(buf, ARRAY_LENGTH(buf), "http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s", machine.system().name);
+//	snprintf(buf, std::size(buf), "mess.chm::/sysinfo/%s.htm", machine.system().name);
+//	snprintf(buf, std::size(buf), "http://messui.polygonal-moogle.com/onlinehelp/%s.html", machine.system().name);
+//	snprintf(buf, std::size(buf), "http://www.progettoemma.net/mess/system.php?machine=%s", machine.system().name);
+	snprintf(buf, std::size(buf), "http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s", machine.system().name);
 	help_display(wnd, buf);
 }
 
@@ -3222,7 +3221,7 @@ static device_image_interface *decode_deviceoption(running_machine &machine, int
 	if (devoption)
 		*devoption = command % DEVOPTION_MAX;
 
-	image_interface_iterator iter(machine.root_device());
+	image_interface_enumerator iter(machine.root_device());
 	return iter.byindex(absolute_index);
 }
 
@@ -3234,11 +3233,10 @@ static device_image_interface *decode_deviceoption(running_machine &machine, int
 
 static void set_window_orientation(win_window_info *window, int orientation)
 {
-	window->m_target->set_orientation(orientation);
-	if (window->m_target->is_ui_target())
+	window->target()->set_orientation(orientation);
+	if (window->target()->is_ui_target())
 	{
-		render_container::user_settings settings;
-		window->machine().render().ui_container().get_user_settings(settings);
+		render_container::user_settings settings = window->machine().render().ui_container().get_user_settings();
 		settings.m_orientation = orientation;
 		window->machine().render().ui_container().set_user_settings(settings);
 	}
@@ -3308,11 +3306,11 @@ static bool invoke_command(HWND wnd, UINT command)
 			break;
 
 		case ID_KEYBOARD_NATURAL:
-			window->machine().ioport().natkeyboard().set_in_use(true);
+			window->machine().natkeyboard().set_in_use(true);
 			break;
 
 		case ID_KEYBOARD_EMULATED:
-			window->machine().ioport().natkeyboard().set_in_use(false);
+			window->machine().natkeyboard().set_in_use(false);
 			break;
 
 		case ID_KEYBOARD_CUSTOMIZE:
@@ -3447,7 +3445,7 @@ static bool invoke_command(HWND wnd, UINT command)
 			if ((command >= ID_VIDEO_VIEW_0) && (command < ID_VIDEO_VIEW_0 + 1000))
 			{
 				// render views
-				window->m_target->set_view(command - ID_VIDEO_VIEW_0);
+				window->target()->set_view(command - ID_VIDEO_VIEW_0);
 				window->update(); // actually change window size
 			}
 			else
@@ -3492,7 +3490,7 @@ static void set_menu_text(HMENU menu_bar, int command, const char *text)
 	MENUITEMINFO mii;
 
 	// convert to TCHAR
-	t_text = ui_wstring_from_utf8(text);
+	t_text = newui_wstring_from_utf8(text);
 
 	// invoke SetMenuItemInfo()
 	memset(&mii, 0, sizeof(mii));
@@ -3531,12 +3529,12 @@ static int win_setup_menus(running_machine &machine, HMODULE module, HMENU menu_
 
 	for(i = 0; i < frameskip_level_count(machine); i++)
 	{
-		snprintf(buf, ARRAY_LENGTH(buf), "%i", i);
+		snprintf(buf, std::size(buf), "%i", i);
 		win_append_menu_utf8(frameskip_menu, MF_STRING, ID_FRAMESKIP_0 + i, buf);
 	}
 
 	// set the help menu to refer to this machine
-	snprintf(buf, ARRAY_LENGTH(buf), "About %s (%s)...", machine.system().type.fullname(), machine.system().name);
+	snprintf(buf, std::size(buf), "About %s (%s)...", machine.system().type.fullname(), machine.system().name);
 	set_menu_text(menu_bar, ID_HELP_ABOUTSYSTEM, buf);
 
 	// initialize state_filename for each driver, so we don't carry names in-between them
@@ -3544,7 +3542,7 @@ static int win_setup_menus(running_machine &machine, HMODULE module, HMENU menu_
 		char *src;
 		char *dst;
 
-		snprintf(state_filename, ARRAY_LENGTH(state_filename), "%s State", machine.system().type.fullname());
+		snprintf(state_filename, std::size(state_filename), "%s State", machine.system().type.fullname());
 
 		src = state_filename;
 		dst = state_filename;
@@ -3626,7 +3624,7 @@ LRESULT CALLBACK winwindow_video_window_proc_ui(HWND wnd, UINT message, WPARAM w
 
 		case WM_PASTE:
 			{
-				mame_machine_manager::instance()->ui().machine().ioport().natkeyboard().paste();
+				mame_machine_manager::instance()->ui().machine().natkeyboard().paste();
 			}
 			break;
 

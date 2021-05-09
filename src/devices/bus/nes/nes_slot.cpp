@@ -276,8 +276,8 @@ inline void device_nes_cart_interface::update_prg_banks(int prg_bank_start, int 
 	for (int prg_bank = prg_bank_start; prg_bank <= prg_bank_end; prg_bank++)
 	{
 		assert(prg_bank >= 0);
-		assert(prg_bank < ARRAY_LENGTH(m_prg_bank));
-		assert(prg_bank < ARRAY_LENGTH(m_prg_bank_mem));
+		assert(prg_bank < std::size(m_prg_bank));
+		assert(prg_bank < std::size(m_prg_bank_mem));
 
 		m_prg_bank_mem[prg_bank]->set_entry(m_prg_bank[prg_bank]);
 	}
@@ -887,6 +887,7 @@ image_init_result nes_cart_slot_device::call_load()
 			else
 			{
 				logerror("%s is NOT a file in either iNES or UNIF format.\n", filename());
+				seterror(IMAGE_ERROR_UNSPECIFIED, "File is neither iNES or UNIF format");
 				return image_init_result::FAIL;
 			}
 		}
@@ -941,7 +942,10 @@ std::string nes_cart_slot_device::get_default_card_software(get_default_card_sof
 		if ((rom[0] == 'U') && (rom[1] == 'N') && (rom[2] == 'I') && (rom[3] == 'F'))
 			slot_string = get_default_card_unif(&rom[0], len);
 
-		return std::string(slot_string);
+		if (slot_string) // MESSUI
+			return std::string(slot_string);
+		else
+			return "";
 	}
 	else
 		return software_get_default_slot("nrom");

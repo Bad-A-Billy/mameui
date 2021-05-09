@@ -597,6 +597,7 @@ Notes:
 #include "machine/clock.h"
 #include "machine/model1io.h"
 #include "machine/model1io2.h"
+#include "machine/nvram.h"
 #include "speaker.h"
 
 #include "vr.lh"
@@ -606,14 +607,15 @@ Notes:
 // and writes the data to the dual port RAM. This isn't
 // emulated yet, data just gets written to RAM.
 
-READ8_MEMBER( model1_state::dpram_r )
+u8 model1_state::dpram_r(offs_t offset)
 {
 	// insert waitstate
-	m_maincpu->adjust_icount(-1);
+	if (!machine().side_effects_disabled())
+		m_maincpu->adjust_icount(-1);
 	return m_dpram->right_r(offset);
 }
 
-WRITE8_MEMBER( model1_state::gen_outputs_w )
+void model1_state::gen_outputs_w(uint8_t data)
 {
 	// generic output lines, output to outx where x = bit
 	// eg. out0 = coin counter 1, see below for per-game descriptions
@@ -623,7 +625,7 @@ WRITE8_MEMBER( model1_state::gen_outputs_w )
 	m_digits[1] = data;
 }
 
-WRITE8_MEMBER( model1_state::vf_outputs_w )
+void model1_state::vf_outputs_w(uint8_t data)
 {
 	// 7654----  unknown (not used?)
 	// ----3---  start 2 lamp
@@ -635,7 +637,7 @@ WRITE8_MEMBER( model1_state::vf_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::vr_outputs_w )
+void model1_state::vr_outputs_w(uint8_t data)
 {
 	// 7-------  race leader lamp
 	// -6------  vr4 (green) lamp
@@ -650,7 +652,7 @@ WRITE8_MEMBER( model1_state::vr_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::swa_outputs_w )
+void model1_state::swa_outputs_w(uint8_t data)
 {
 	// 7-------  unknown (not used?)
 	// -6------  unknown (1 while in-game)
@@ -665,7 +667,7 @@ WRITE8_MEMBER( model1_state::swa_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::wingwar_outputs_w )
+void model1_state::wingwar_outputs_w(uint8_t data)
 {
 	// 7-------  unknown (not used?)
 	// -6------  view selector 4 lamp
@@ -679,7 +681,7 @@ WRITE8_MEMBER( model1_state::wingwar_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::wingwar360_outputs_w )
+void model1_state::wingwar360_outputs_w(uint8_t data)
 {
 	// 7654----  unknown (not used?)
 	// ----3---  danger lamp
@@ -691,7 +693,7 @@ WRITE8_MEMBER( model1_state::wingwar360_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::netmerc_outputs_w )
+void model1_state::netmerc_outputs_w(uint8_t data)
 {
 	// 76------  unknown (not used?)
 	// --54----  mvd backlights
@@ -703,17 +705,17 @@ WRITE8_MEMBER( model1_state::netmerc_outputs_w )
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
 }
 
-WRITE8_MEMBER( model1_state::drive_board_w )
+void model1_state::drive_board_w(uint8_t data)
 {
 	m_digits[0] = data;
 }
 
-READ8_MEMBER( model1_state::r360_r )
+uint8_t model1_state::r360_r()
 {
 	return m_r360_state;
 }
 
-WRITE8_MEMBER( model1_state::r360_w )
+void model1_state::r360_w(uint8_t data)
 {
 	/*
 	    this uses the feedback board protocol
@@ -726,6 +728,8 @@ WRITE8_MEMBER( model1_state::r360_w )
 	    bb = ready to go
 	    ba = ingame
 	    b9 = game over
+
+	    af = throttle
 
 	    results:
 	    40 = default status
@@ -762,15 +766,18 @@ WRITE8_MEMBER( model1_state::r360_w )
 		case 0xb9:
 			m_r360_state = ~0x40;
 			break;
+		case 0xaf:
+			m_r360_state = ~m_throttle->read();
+			break;
 	}
 }
 
-READ16_MEMBER(model1_state::fifoin_status_r)
+u16 model1_state::fifoin_status_r()
 {
 	return 0xffff;
 }
 
-WRITE16_MEMBER(model1_state::bank_w)
+void model1_state::bank_w(offs_t offset, u16 data, u16 mem_mask)
 {
 
 	if(ACCESSING_BITS_0_7) {
@@ -808,7 +815,7 @@ IRQ_CALLBACK_MEMBER(model1_state::irq_callback)
 	return m_last_irq;
 }
 
-WRITE8_MEMBER(model1_state::irq_control_w)
+void model1_state::irq_control_w(u8 data)
 {
 	switch (data)
 	{
@@ -867,6 +874,9 @@ void model1_state::machine_reset()
 	irq_init();
 	copro_reset();
 
+	m_irq_status = 0;
+	m_last_irq = 0;
+
 	if (!strcmp(machine().system().name, "swa") ||
 		!strcmp(machine().system().name, "swaj"))
 	{
@@ -885,7 +895,7 @@ void model1_state::model1_mem(address_map &map)
 	/* ROMO */ map(0x100000, 0x1fffff).bankr("bank1");
 	/* ROMX */ map(0x200000, 0x2fffff).rom();
 	/* ROMY */
-	/* RAMA */ map(0x400000, 0x40ffff).ram();
+	/* RAMA */ map(0x400000, 0x40ffff).ram().share("nvram");
 	/* RAMB */ map(0x500000, 0x53ffff).ram();
 
 	/* TGP  */ map(0x600000, 0x60ffff).ram().share("display_list0");
@@ -1703,6 +1713,8 @@ void model1_state::model1(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &model1_state::model1_mem);
 	m_maincpu->set_addrmap(AS_IO, &model1_state::model1_io);
 	m_maincpu->set_irq_acknowledge_callback(FUNC(model1_state::irq_callback));
+
+	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0); // exact type uncertain
 
 	GENERIC_FIFO_U32(config, "copro_fifo_in", 0);
 	GENERIC_FIFO_U32(config, "copro_fifo_out", 0);

@@ -48,7 +48,6 @@
 
  ***********************************************************************************************************/
 
-
 #include "emu.h"
 #include "snes_slot.h"
 
@@ -240,6 +239,8 @@ void base_sns_cart_slot_device::device_start()
 	m_cart = dynamic_cast<device_sns_cart_interface *>(get_card_device());
 	if (m_cart != nullptr)
 		m_cart->m_slot = this;
+	else
+		osd_printf_error("The cart could not be loaded\n");   // MESSUI - let us know there's a problem
 
 	m_irq_callback.resolve_safe();
 	m_open_bus_callback.resolve_safe(0xff);
@@ -312,7 +313,7 @@ static int sns_get_pcb_id(const char *slot)
 {
 	for (auto & elem : slot_list)
 	{
-		if (!core_stricmp(elem.slot_option, slot))
+		if (!strcmp(elem.slot_option, slot))
 			return elem.pcb_id;
 	}
 
@@ -1373,7 +1374,7 @@ void base_sns_cart_slot_device::internal_header_logging(uint8_t *ROM, uint32_t l
 
 	logerror( "\tSize:          %d megabits [%d]\n", 1 << (ROM[hilo_mode + 0x17] - 7), ROM[hilo_mode + 0x17]);
 	logerror( "\tSRAM:          %d kilobits [%d]\n", ROM[hilo_mode + 0x18] * 8, ROM[hilo_mode + 0x18] );
-	if (ROM[hilo_mode + 0x19] < ARRAY_LENGTH(countries))
+	if (ROM[hilo_mode + 0x19] < std::size(countries))
 		logerror( "\tCountry:       %s [%d]\n", countries[ROM[hilo_mode + 0x19]], ROM[hilo_mode + 0x19]);
 	else
 		logerror( "\tCountry:       Unknown [%d]\n", ROM[hilo_mode + 0x19]);

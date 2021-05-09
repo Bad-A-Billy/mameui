@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles
 /***************************************************************************
 
-    machine.c
+    machine.cpp
 
     Controls execution of the core MAME system.
 
@@ -84,7 +84,9 @@
 #include "network.h"
 #include "romload.h"
 #include "tilemap.h"
+#include "natkeyboard.h"
 #include "ui/uimain.h"
+#include "corestr.h"
 #include <ctime>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -140,7 +142,7 @@ running_machine::running_machine(const machine_config &_config, machine_manager 
 	m_dummy_space.config_complete();
 
 	// set the machine on all devices
-	device_iterator iter(root_device());
+	device_enumerator iter(root_device());
 	for (device_t &device : iter)
 		device.set_machine(*this);
 
@@ -189,11 +191,11 @@ std::string running_machine::describe_context() const
 void running_machine::start()
 {
 	// initialize basic can't-fail systems here
-	m_configuration = std::make_unique<configuration_manager>(*this);
-	m_input = std::make_unique<input_manager>(*this);
-	m_output = std::make_unique<output_manager>(*this);
-	m_render = std::make_unique<render_manager>(*this);
-	m_bookkeeping = std::make_unique<bookkeeping_manager>(*this);
+	m_configuration = make_unique_clear<configuration_manager>(*this);
+	m_input = make_unique_clear<input_manager>(*this);
+	m_output = make_unique_clear<output_manager>(*this);
+	m_render = make_unique_clear<render_manager>(*this);
+	m_bookkeeping = make_unique_clear<bookkeeping_manager>(*this);
 
 	// allocate a soft_reset timer
 	m_soft_reset_timer = m_scheduler.timer_alloc(timer_expired_delegate(FUNC(running_machine::soft_reset), this));
@@ -205,7 +207,7 @@ void running_machine::start()
 	m_manager.osd().init(*this);
 
 	// create the video manager
-	m_video = std::make_unique<video_manager>(*this);
+	m_video = make_unique_clear<video_manager>(*this);
 	m_ui = manager().create_ui(*this);
 
 	// initialize the base time (needed for doing record/playback)
@@ -218,11 +220,14 @@ void running_machine::start()
 	if (newbase != 0)
 		m_base_time = newbase;
 
+	// initialize natural keyboard support after ports have been initialized
+	m_natkeyboard = make_unique_clear<natural_keyboard>(*this);
+
 	// initialize the streams engine before the sound devices start
-	m_sound = std::make_unique<sound_manager>(*this);
+	m_sound = make_unique_clear<sound_manager>(*this);
 
 	// resolve objects that can be used by memory maps
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		device.resolve_pre_map();
 
 	// configure the address spaces, load ROMs (which needs
@@ -237,22 +242,22 @@ void running_machine::start()
 	save().save_item(NAME(m_rand_seed));
 
 	// initialize image devices
-	m_image = std::make_unique<image_manager>(*this);
-	m_tilemap = std::make_unique<tilemap_manager>(*this);
+	m_image = make_unique_clear<image_manager>(*this);
+	m_tilemap = make_unique_clear<tilemap_manager>(*this);
 	m_crosshair = make_unique_clear<crosshair_manager>(*this);
-	m_network = std::make_unique<network_manager>(*this);
+	m_network = make_unique_clear<network_manager>(*this);
 
 	// initialize the debugger
 	if ((debug_flags & DEBUG_FLAG_ENABLED) != 0)
 	{
-		m_debug_view = std::make_unique<debug_view_manager>(*this);
-		m_debugger = std::make_unique<debugger_manager>(*this);
+		m_debug_view = make_unique_clear<debug_view_manager>(*this);
+		m_debugger = make_unique_clear<debugger_manager>(*this);
 	}
 
 	manager().create_custom(*this);
 
 	// resolve objects that are created by memory maps
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		device.resolve_post_map();
 
 	// register callbacks for the devices, then start them
@@ -276,7 +281,7 @@ void running_machine::start()
 		m_video->begin_recording(filename, movie_recording::format::MNG);
 
 	filename = options().avi_write();
-	if (filename[0] != 0)
+	if (filename[0] != 0 && !m_video->is_recording())
 		m_video->begin_recording(filename, movie_recording::format::AVI);
 
 	// if we're coming in with a savegame request, process it now
@@ -311,13 +316,21 @@ int running_machine::run(bool quiet)
 		// if we have a logfile, set up the callback
 		if (options().log() && !quiet)
 		{
-			m_logfile = std::make_unique<emu_file>(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			m_logfile = make_unique_clear<emu_file>(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
 			osd_file::error filerr = m_logfile->open("error.log");
 			if (filerr != osd_file::error::NONE)
-				throw emu_fatalerror("running_machine::run: unable to open log file");
+				throw emu_fatalerror("running_machine::run: unable to open error.log file");
 
 			using namespace std::placeholders;
 			add_logerror_callback(std::bind(&running_machine::logfile_callback, this, _1));
+		}
+
+		if (options().debug() && options().debuglog())
+		{
+			m_debuglogfile = make_unique_clear<emu_file>(OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			osd_file::error filerr = m_debuglogfile->open("debug.log");
+			if (filerr != osd_file::error::NONE)
+				throw emu_fatalerror("running_machine::run: unable to open debug.log file");
 		}
 
 		// then finish setting up our local machine
@@ -342,6 +355,8 @@ int running_machine::run(bool quiet)
 		if (!quiet)
 			sound().start_recording();
 
+		m_hard_reset_pending = false;
+
 		// initialize ui lists
 		// display the startup screens
 		manager().ui_initialize(*this);
@@ -354,8 +369,6 @@ int running_machine::run(bool quiet)
 			handle_saveload();
 
 		export_http_api();
-
-		m_hard_reset_pending = false;
 
 #if defined(__EMSCRIPTEN__)
 		// break out to our async javascript loop and halt
@@ -521,21 +534,10 @@ std::string running_machine::get_statename(const char *option) const
 			int name_found = 0;
 
 			// find length of the device name
-			int end1 = statename_str.find('/', pos + 3);
-			int end2 = statename_str.find('%', pos + 3);
-			int end;
-
-			if ((end1 != -1) && (end2 != -1))
-				end = std::min(end1, end2);
-			else if (end1 != -1)
-				end = end1;
-			else if (end2 != -1)
-				end = end2;
-			else
+			int end = statename_str.find_first_not_of("abcdefghijklmnopqrstuvwxyz1234567890", pos + 3);
+			if (end == -1)
 				end = statename_str.length();
 
-			if (end - pos < 3)
-				fatalerror("Something very wrong is going on!!!\n");
 
 			// copy the device name to an std::string
 			std::string devname_str;
@@ -543,7 +545,7 @@ std::string running_machine::get_statename(const char *option) const
 			//printf("check template: %s\n", devname_str.c_str());
 
 			// verify that there is such a device for this system
-			for (device_image_interface &image : image_interface_iterator(root_device()))
+			for (device_image_interface &image : image_interface_enumerator(root_device()))
 			{
 				// get the device name
 				std::string tempdevname(image.brief_instance_name());
@@ -790,15 +792,15 @@ void running_machine::add_notifier(machine_notification event, machine_notify_de
 		throw emu_fatalerror("Can only call running_machine::add_notifier at init time!");
 
 	if (first)
-		m_notifier_list[event].push_front(std::make_unique<notifier_callback_item>(callback));
+		m_notifier_list[event].push_front(make_unique_clear<notifier_callback_item>(callback));
 
 	// exit notifiers are added to the head, and executed in reverse order
 	else if (event == MACHINE_NOTIFY_EXIT)
-		m_notifier_list[event].push_front(std::make_unique<notifier_callback_item>(callback));
+		m_notifier_list[event].push_front(make_unique_clear<notifier_callback_item>(callback));
 
 	// all other notifiers are added to the tail, and executed in the order registered
 	else
-		m_notifier_list[event].push_back(std::make_unique<notifier_callback_item>(callback));
+		m_notifier_list[event].push_back(make_unique_clear<notifier_callback_item>(callback));
 }
 
 
@@ -812,7 +814,7 @@ void running_machine::add_logerror_callback(logerror_callback callback)
 	if (m_current_phase != machine_phase::INIT)
 		throw emu_fatalerror("Can only call running_machine::add_logerror_callback at init time!");
 	m_string_buffer.reserve(1024);
-	m_logerror_list.push_back(std::make_unique<logerror_callback_item>(callback));
+	m_logerror_list.push_back(make_unique_clear<logerror_callback_item>(callback));
 }
 
 
@@ -870,7 +872,7 @@ void running_machine::current_datetime(system_time &systime)
 
 void running_machine::set_rtc_datetime(const system_time &systime)
 {
-	for (device_rtc_interface &rtc : rtc_interface_iterator(root_device()))
+	for (device_rtc_interface &rtc : rtc_interface_enumerator(root_device()))
 		if (rtc.has_battery())
 			rtc.set_current_time(systime);
 }
@@ -976,10 +978,14 @@ void running_machine::handle_saveload()
 					file.remove_on_close();
 			}
 			else if (openflags == OPEN_FLAG_READ && filerr == osd_file::error::NOT_FOUND)
+			{
 				// attempt to load a non-existent savestate, report empty slot
 				popmessage("Error: No savestate file to load.", opname);
+			}
 			else
+			{
 				popmessage("Error: Failed to open file for %s operation.", opname);
+			}
 		}
 	}
 
@@ -1039,7 +1045,7 @@ void running_machine::start_all_devices()
 	{
 		// iterate over all devices
 		int failed_starts = 0;
-		for (device_t &device : device_iterator(root_device()))
+		for (device_t &device : device_enumerator(root_device()))
 			if (!device.started())
 			{
 				// attempt to start the device, catching any expected exceptions
@@ -1096,7 +1102,7 @@ void running_machine::stop_all_devices()
 		debugger().cpu().comment_save();
 
 	// iterate over devices and stop them
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		device.stop();
 }
 
@@ -1108,7 +1114,7 @@ void running_machine::stop_all_devices()
 
 void running_machine::presave_all_devices()
 {
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		device.pre_save();
 }
 
@@ -1120,7 +1126,7 @@ void running_machine::presave_all_devices()
 
 void running_machine::postload_all_devices()
 {
-	for (device_t &device : device_iterator(root_device()))
+	for (device_t &device : device_enumerator(root_device()))
 		device.post_load();
 }
 
@@ -1173,7 +1179,7 @@ std::string running_machine::nvram_filename(device_t &device) const
 
 void running_machine::nvram_load()
 {
-	for (device_nvram_interface &nvram : nvram_interface_iterator(root_device()))
+	for (device_nvram_interface &nvram : nvram_interface_enumerator(root_device()))
 	{
 		emu_file file(options().nvram_directory(), OPEN_FLAG_READ);
 		if (file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
@@ -1193,13 +1199,16 @@ void running_machine::nvram_load()
 
 void running_machine::nvram_save()
 {
-	for (device_nvram_interface &nvram : nvram_interface_iterator(root_device()))
+	for (device_nvram_interface &nvram : nvram_interface_enumerator(root_device()))
 	{
-		emu_file file(options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-		if (file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
+		if (nvram.nvram_can_save())
 		{
-			nvram.nvram_save(file);
-			file.close();
+			emu_file file(options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			if (file.open(nvram_filename(nvram.device())) == osd_file::error::NONE)
+			{
+				nvram.nvram_save(file);
+				file.close();
+			}
 		}
 	}
 }
@@ -1258,7 +1267,7 @@ void running_machine::export_http_api()
 			writer.Key("devices");
 			writer.StartArray();
 
-			device_iterator iter(this->root_device());
+			device_enumerator iter(this->root_device());
 			for (device_t &device : iter)
 				writer.String(device.tag());
 
@@ -1328,12 +1337,12 @@ void system_time::full_time::set(struct tm &t)
 //  DUMMY ADDRESS SPACE
 //**************************************************************************
 
-READ8_MEMBER(dummy_space_device::read)
+u8 dummy_space_device::read(offs_t offset)
 {
 	throw emu_fatalerror("Attempted to read from generic address space (offs %X)\n", offset);
 }
 
-WRITE8_MEMBER(dummy_space_device::write)
+void dummy_space_device::write(offs_t offset, u8 data)
 {
 	throw emu_fatalerror("Attempted to write to generic address space (offs %X = %02X)\n", offset, data);
 }

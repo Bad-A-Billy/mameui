@@ -86,8 +86,8 @@ public:
 		m_cassette(*this, CASSETTE_TAG),
 		m_ram(*this, RAM_TAG),
 		m_rom(*this, Z80_TAG),
-		m_video_ram(*this, "video_ram"),
-		m_char_ram(*this, "char_ram"),
+		m_video_ram(*this, "video_ram", 0x4000, ENDIANNESS_LITTLE),
+		m_char_ram(*this, "char_ram", 0x800, ENDIANNESS_LITTLE),
 		m_io_sb(*this, "SB"),
 		m_ctc_z0(0),
 		m_sio_txcb(0),
@@ -106,8 +106,8 @@ public:
 	optional_device<cassette_image_device> m_cassette;
 	required_device<ram_device> m_ram;
 	required_memory_region m_rom;
-	optional_shared_ptr<uint8_t> m_video_ram;
-	optional_shared_ptr<uint8_t> m_char_ram;
+	memory_share_creator<uint8_t> m_video_ram;
+	memory_share_creator<uint8_t> m_char_ram;
 	required_ioport m_io_sb;
 
 	virtual void machine_start() override;
@@ -116,12 +116,12 @@ public:
 
 	void cassette_output_tick(int state);
 
-	DECLARE_READ8_MEMBER( read );
-	DECLARE_WRITE8_MEMBER( write );
-	virtual DECLARE_READ8_MEMBER( m1_r );
-	DECLARE_READ8_MEMBER( pling_r );
-	DECLARE_WRITE8_MEMBER( hrs_w );
-	DECLARE_WRITE8_MEMBER( hrc_w );
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
+	virtual uint8_t m1_r(offs_t offset);
+	uint8_t pling_r();
+	void hrs_w(uint8_t data);
+	void hrc_w(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER( ctc_z0_w );
 	DECLARE_WRITE_LINE_MEMBER( ctc_z1_w );
 	DECLARE_WRITE_LINE_MEMBER( sio_txdb_w );
@@ -211,7 +211,7 @@ public:
 
 	void hr_update(bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	DECLARE_READ8_MEMBER( char_ram_r );
+	uint8_t char_ram_r(offs_t offset);
 	void abc800c_palette(palette_device &palette) const;
 	void abc800c(machine_config &config);
 	void abc800c_video(machine_config &config);
@@ -240,8 +240,8 @@ public:
 	virtual void machine_reset() override;
 	virtual void video_start() override;
 
-	DECLARE_READ8_MEMBER( read );
-	DECLARE_WRITE8_MEMBER( write );
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER( lrs_w );
 	DECLARE_WRITE_LINE_MEMBER( mux80_40_w );
 	DECLARE_WRITE_LINE_MEMBER( vs_w );
@@ -276,7 +276,7 @@ public:
 		m_rad_prom(*this, "rad"),
 		m_hru2_prom(*this, "hru"),
 		m_char_rom(*this, MC6845_TAG),
-		m_attr_ram(*this, "attr_ram")
+		m_attr_ram(*this, "attr_ram", 0x800, ENDIANNESS_LITTLE)
 	{ }
 
 	required_device<mc6845_device> m_crtc;
@@ -285,7 +285,7 @@ public:
 	required_memory_region m_rad_prom;
 	required_memory_region m_hru2_prom;
 	required_memory_region m_char_rom;
-	optional_shared_ptr<uint8_t> m_attr_ram;
+	memory_share_creator<uint8_t> m_attr_ram;
 
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -296,20 +296,20 @@ public:
 	void read_pal_p4(offs_t offset, bool m1l, bool xml, offs_t &m, bool &romd, bool &ramd, bool &hre, bool &vr);
 	void hr_update(bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
-	DECLARE_READ8_MEMBER( read );
-	DECLARE_WRITE8_MEMBER( write );
-	DECLARE_READ8_MEMBER( m1_r ) override;
-	DECLARE_READ8_MEMBER( mai_r );
-	DECLARE_WRITE8_MEMBER( mao_w );
-	DECLARE_WRITE8_MEMBER( hrs_w );
-	DECLARE_WRITE8_MEMBER( hrc_w );
-	DECLARE_READ8_MEMBER( charram_r );
-	DECLARE_WRITE8_MEMBER( charram_w );
-	DECLARE_READ8_MEMBER( ami_r );
-	DECLARE_WRITE8_MEMBER( amo_w );
-	DECLARE_READ8_MEMBER( cli_r );
-	DECLARE_WRITE8_MEMBER( sso_w );
-	DECLARE_READ8_MEMBER( sti_r );
+	uint8_t read(offs_t offset);
+	void write(offs_t offset, uint8_t data);
+	uint8_t m1_r(offs_t offset) override;
+	uint8_t mai_r(offs_t offset);
+	void mao_w(offs_t offset, uint8_t data);
+	void hrs_w(uint8_t data);
+	void hrc_w(offs_t offset, uint8_t data);
+	uint8_t charram_r(offs_t offset);
+	void charram_w(offs_t offset, uint8_t data);
+	uint8_t ami_r();
+	void amo_w(uint8_t data);
+	uint8_t cli_r(offs_t offset);
+	void sso_w(uint8_t data);
+	uint8_t sti_r();
 	void sto_w(uint8_t data);
 	DECLARE_WRITE_LINE_MEMBER( hs_w );
 	DECLARE_WRITE_LINE_MEMBER( vs_w );

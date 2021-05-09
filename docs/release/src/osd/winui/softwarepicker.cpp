@@ -35,7 +35,7 @@
 #include "hash.h"
 #include "softwarepicker.h"
 #include "drivenum.h"
-
+#include "corestr.h"
 
 
 //============================================================
@@ -93,6 +93,8 @@ static const TCHAR software_picker_property_name[] = TEXT("SWPICKER");
 
 static LPCSTR NormalizePath(LPCSTR pszPath, LPSTR pszBuffer, size_t nBufferSize)
 {
+	std::fill_n(pszBuffer,nBufferSize,0);
+	nBufferSize--;
 	BOOL bChanged = FALSE;
 	LPSTR s;
 	int i, j;
@@ -103,7 +105,8 @@ static LPCSTR NormalizePath(LPCSTR pszPath, LPSTR pszBuffer, size_t nBufferSize)
 		pszBuffer[2] = '\0';
 		bChanged = TRUE;
 	}
-	else if (!isalpha(pszPath[0]) || (pszPath[1] != ':'))
+	else
+	if (!isalpha(pszPath[0]) || (pszPath[1] != ':'))
 	{
 		win_get_current_directory_utf8(nBufferSize, pszBuffer);
 		bChanged = TRUE;
@@ -382,7 +385,7 @@ static BOOL SoftwarePicker_AddFileEntry(HWND hwndPicker, LPCSTR pszFilename, UIN
 		pszExtension = strrchr(pszFilename, '.');
 	if ((pszExtension) && (pPickerInfo->config))
 	{
-		for (device_image_interface &dev : image_interface_iterator(pPickerInfo->config->mconfig->root_device()))
+		for (device_image_interface &dev : image_interface_enumerator(pPickerInfo->config->mconfig->root_device()))
 		{
 			if (!dev.user_loadable())
 				continue;
@@ -413,7 +416,7 @@ static BOOL SoftwarePicker_AddFileEntry(HWND hwndPicker, LPCSTR pszFilename, UIN
 	if ((device != NULL))
 		nCrc = 0;
 	//if (nCrc != 0)
-		//snprintf(pInfo->hash_string, ARRAY_LENGTH(pInfo->hash_string), "c:%08x#", nCrc);
+		//snprintf(pInfo->hash_string, std::size(pInfo->hash_string), "c:%08x#", nCrc);
 
 	// set up zip entry name length, if specified
 	if (nZipEntryNameLength > 0)
@@ -506,10 +509,10 @@ static BOOL SoftwarePicker_InternalAddFile(HWND hwndPicker, LPCSTR pszFilename, 
 
 BOOL SoftwarePicker_AddFile(HWND hwndPicker, LPCSTR pszFilename, bool check)
 {
-	char szBuffer[2048];
+	char szBuffer[2048] = {0,};
 
 	Picker_ResetIdle(hwndPicker);
-	pszFilename = NormalizePath(pszFilename, szBuffer, sizeof(szBuffer) / sizeof(szBuffer[0]));
+	pszFilename = NormalizePath(pszFilename, szBuffer, std::size(szBuffer));
 
 	return SoftwarePicker_InternalAddFile(hwndPicker, pszFilename, TRUE, check);
 }
@@ -522,9 +525,9 @@ BOOL SoftwarePicker_AddDirectory(HWND hwndPicker, LPCSTR pszDirectory)
 	directory_search_info *pSearchInfo;
 	directory_search_info **ppLast;
 	size_t nSearchInfoSize;
-	char szBuffer[2048];
+	char szBuffer[2048] = {0,};
 
-	pszDirectory = NormalizePath(pszDirectory, szBuffer, sizeof(szBuffer) / sizeof(szBuffer[0]));
+	pszDirectory = NormalizePath(pszDirectory, szBuffer, std::size(szBuffer));
 
 	Picker_ResetIdle(hwndPicker);
 	pPickerInfo = GetSoftwarePickerInfo(hwndPicker);

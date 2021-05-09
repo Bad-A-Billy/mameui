@@ -5312,7 +5312,7 @@ kept for now until finding out what those bytes affect...
 		</part>
 	</software>
 
-	<software name="gw126a">
+	<software name="gw126a" cloneof="gw126">
 		<description>Game World - 126 Games (Kor, Hacked?)</description>
 		<year>19??</year>
 		<publisher>Zemina</publisher>
@@ -6137,7 +6137,7 @@ kept for now until finding out what those bytes affect...
 			<feature name="slot" value="ascii16_sram" />
 			<feature name="mapper" value="M60002-0125SP-16" />
 			<dataarea name="rom" size="262144">
-				<rom name="harryfox msx special (japan).rom" size="131072" crc="96b7faca" sha1="a3de07612da7986387a4f5c41bbbc7e3b244e077" offset="0" />
+				<rom name="hurryfox msx special (japan).rom" size="131072" crc="96b7faca" sha1="a3de07612da7986387a4f5c41bbbc7e3b244e077" offset="0" />
 				<rom size="131072" offset="0x20000" loadflag="reload" />
 			</dataarea>
 			<dataarea name="sram" size="2048">
@@ -6154,7 +6154,7 @@ kept for now until finding out what those bytes affect...
 			<feature name="slot" value="hfox" />
 			<feature name="mapper" value="M60002-0125SP-16" />
 			<dataarea name="rom" size="65536">
-				<rom name="harryfox yki no maoh (japan).rom" size="65536" crc="c7fe3ee1" sha1="3626b5dd3188ec2a16e102d05c79f8f242fbd892" offset="0" />
+				<rom name="hurryfox yuki no maoh (japan).rom" size="65536" crc="c7fe3ee1" sha1="3626b5dd3188ec2a16e102d05c79f8f242fbd892" offset="0" />
 			</dataarea>
 		</part>
 	</software>
@@ -6465,6 +6465,19 @@ kept for now until finding out what those bytes affect...
 		<part name="cart" interface="msx_cart">
 			<dataarea name="rom" size="16384">
 				<rom name="iriegas (japan).rom" size="16384" crc="36a08e0b" sha1="95ae5b3e24ad0bea21902cb7dfd3fd9581166a76" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="ink">
+		<description>Ink - Exxon Surfing</description>
+		<year>2006</year>
+		<publisher>Matra</publisher>
+		<part name="cart" interface="msx_cart">
+			<feature name="slot" value="ink" />
+			<dataarea name="rom" size="524288">
+				<!-- Am29F040B flashrom dump -->
+				<rom name="ink.bin" size="524288" crc="23049642" sha1="4d74d3bad55a9b1deb88b81bd4ad5165383508d5" offset="0" />
 			</dataarea>
 		</part>
 	</software>

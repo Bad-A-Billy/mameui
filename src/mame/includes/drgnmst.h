@@ -7,11 +7,10 @@
 
 #include "cpu/pic16c5x/pic16c5x.h"
 #include "sound/okim6295.h"
-#include "sound/3812intf.h"
-#include "sound/okim6295.h"
 #include "sound/ym2151.h"
 #include "emupal.h"
 #include "tilemap.h"
+#include "video/bufsprite.h"
 
 class drgnmst_base_state : public driver_device
 {
@@ -56,13 +55,13 @@ private:
 	required_shared_ptr<uint16_t> m_md_videoram;
 	required_shared_ptr<uint16_t> m_rowscrollram;
 	required_shared_ptr<uint16_t> m_vidregs2;
-	required_shared_ptr<uint16_t> m_spriteram;
+	required_device<buffered_spriteram16_device> m_spriteram;
 
 	/* devices */
-	DECLARE_WRITE16_MEMBER(coin_w);
-	DECLARE_WRITE16_MEMBER(fg_videoram_w);
-	DECLARE_WRITE16_MEMBER(bg_videoram_w);
-	DECLARE_WRITE16_MEMBER(md_videoram_w);
+	void coin_w(uint16_t data);
+	void fg_videoram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	void bg_videoram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
+	void md_videoram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	TILE_GET_INFO_MEMBER(get_fg_tile_info);
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
 	TILE_GET_INFO_MEMBER(get_md_tile_info);
@@ -111,14 +110,14 @@ private:
 	uint8_t       m_pic16c5x_port0;
 	uint8_t       m_oki_bank[2];
 
-	DECLARE_WRITE8_MEMBER(snd_command_w);
-	DECLARE_WRITE8_MEMBER(snd_flag_w);
-	DECLARE_READ8_MEMBER(pic16c5x_port0_r);
-	DECLARE_READ8_MEMBER(snd_command_r);
-	DECLARE_READ8_MEMBER(snd_flag_r);
-	DECLARE_WRITE8_MEMBER(pcm_banksel_w);
-	DECLARE_WRITE8_MEMBER(oki_w);
-	DECLARE_WRITE8_MEMBER(snd_control_w);
+	void snd_command_w(uint8_t data);
+	void snd_flag_w(uint8_t data);
+	uint8_t pic16c5x_port0_r();
+	uint8_t snd_command_r();
+	uint8_t snd_flag_r();
+	void pcm_banksel_w(uint8_t data);
+	void oki_w(uint8_t data);
+	void snd_control_w(uint8_t data);
 
 	void drgnmst_main_map_with_pic(address_map& map);
 

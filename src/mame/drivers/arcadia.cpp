@@ -455,10 +455,10 @@ void arcadia_state::machine_start()
 		switch (m_cart->get_type())
 		{
 		case ARCADIA_STD:
-			m_maincpu->space(AS_PROGRAM).install_read_handler(0x2000, 0x7fff, read8_delegate(*m_cart, FUNC(arcadia_cart_slot_device::extra_rom)));
+			m_maincpu->space(AS_PROGRAM).install_read_handler(0x2000, 0x7fff, read8sm_delegate(*m_cart, FUNC(arcadia_cart_slot_device::extra_rom)));
 			break;
 		case ARCADIA_GOLF:
-			m_maincpu->space(AS_PROGRAM).install_read_handler(0x4000, 0x4fff, read8_delegate(*m_cart, FUNC(arcadia_cart_slot_device::extra_rom)));
+			m_maincpu->space(AS_PROGRAM).install_read_handler(0x4000, 0x4fff, read8sm_delegate(*m_cart, FUNC(arcadia_cart_slot_device::extra_rom)));
 			break;
 		}
 	}
@@ -491,7 +491,7 @@ void arcadia_state::arcadia(machine_config &config)
 	m_screen->set_palette(m_palette);
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_arcadia);
-	PALETTE(config, m_palette, FUNC(arcadia_state::palette_init), ARRAY_LENGTH(arcadia_palette), 8);
+	PALETTE(config, m_palette, FUNC(arcadia_state::palette_init), std::size(arcadia_palette), 8);
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
@@ -795,10 +795,10 @@ void arcadia_state::init_arcadia()
 		};
 #if 1
 		FILE *f = fopen("chartest.bin","wb");
-		fwrite(prog, ARRAY_LENGTH(prog), sizeof(prog[0]), f);
+		fwrite(prog, std::size(prog), sizeof(prog[0]), f);
 		fclose(f);
 #endif
-		for (int i = 0; i < ARRAY_LENGTH(prog); i++) rom[i] = prog[i];
+		for (int i = 0; i < std::size(prog); i++) rom[i] = prog[i];
 
 	}
 #endif

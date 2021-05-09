@@ -17,6 +17,7 @@
 #include "winui.h"
 #include "resource.h"
 #include "mui_opts.h"
+#include "emu_opts.h"
 #include "picker.h"
 #include "tabview.h"
 #include "mui_util.h"
@@ -290,7 +291,7 @@ static char *strncpyz(char *dest, const char *source, size_t len)
 
 static const device_entry *lookupdevice(iodevice_t d)
 {
-	for (int i = 0; i < ARRAY_LENGTH(s_devices); i++)
+	for (int i = 0; i < std::size(s_devices); i++)
 	{
 		if (s_devices[i].dev_type == d)
 			return &s_devices[i];
@@ -416,7 +417,7 @@ static int GetMessIcon(int drvindex, int nSoftwareType)
 			drv = &driver_list::driver(drvindex);
 			while (drv)
 			{
-				_snprintf(buffer, ARRAY_LENGTH(buffer), "%s/%s", drv->name, iconname);
+				_snprintf(buffer, std::size(buffer), "%s/%s", drv->name, iconname);
 				hIcon = LoadIconFromFile(buffer);
 				if (hIcon)
 					break;
@@ -454,7 +455,7 @@ static string ProcessSWDir(int drvindex)
 	char dir0[2048];
 	char *t0 = 0;
 	printf("ProcessSWDir: A\n");fflush(stdout);
-	string t = GetSWDir();
+	string t = dir_get_value(13);
 	if (!t.empty())
 	{
 		printf("ProcessSWDir: B=%s\n",t.c_str());fflush(stdout);
@@ -703,7 +704,7 @@ static BOOL MView_SetDriver(HWND hwndMView, const software_config *sconfig)
 
 	// count total amount of devices
 	printf("MView_SetDriver: C\n");fflush(stdout);
-	for (device_image_interface &dev : image_interface_iterator(pMViewInfo->config->mconfig->root_device()))
+	for (device_image_interface &dev : image_interface_enumerator(pMViewInfo->config->mconfig->root_device()))
 		if (dev.user_loadable())
 			pMViewInfo->slots++;
 
@@ -716,7 +717,7 @@ static BOOL MView_SetDriver(HWND hwndMView, const software_config *sconfig)
 		LPTSTR *ppszDevices;
 		ppszDevices = (LPTSTR *) alloca(pMViewInfo->slots * sizeof(*ppszDevices));
 		i = 0;
-		for (device_image_interface &dev : image_interface_iterator(pMViewInfo->config->mconfig->root_device()))
+		for (device_image_interface &dev : image_interface_enumerator(pMViewInfo->config->mconfig->root_device()))
 		{
 			if (!dev.user_loadable())
 				continue;
@@ -754,7 +755,7 @@ static BOOL MView_SetDriver(HWND hwndMView, const software_config *sconfig)
 
 		// Now actually display the media-slot names, and show the empty boxes and the browse button
 		LONG_PTR l = 0;
-		for (device_image_interface &dev : image_interface_iterator(pMViewInfo->config->mconfig->root_device()))
+		for (device_image_interface &dev : image_interface_enumerator(pMViewInfo->config->mconfig->root_device()))
 		{
 			if (!dev.user_loadable())
 				continue;
@@ -873,7 +874,7 @@ BOOL MyFillSoftwareList(int drvindex, BOOL bForce)
 	SoftwareList_SetDriver(hwndSoftwareList, s_config);
 
 	printf("MyFillSoftwareList: Getting Softlist Information\n");fflush(stdout);
-	for (software_list_device &swlistdev : software_list_device_iterator(s_config->mconfig->root_device()))
+	for (software_list_device &swlistdev : software_list_device_enumerator(s_config->mconfig->root_device()))
 	{
 		if (swlistdev.is_compatible() || swlistdev.is_original())
 		{
@@ -882,7 +883,7 @@ BOOL MyFillSoftwareList(int drvindex, BOOL bForce)
 				const software_part &swpart = swinfo.parts().front();
 
 				// search for a device with the right interface
-				for (const device_image_interface &image : image_interface_iterator(s_config->mconfig->root_device()))
+				for (const device_image_interface &image : image_interface_enumerator(s_config->mconfig->root_device()))
 				{
 					if (!image.user_loadable())
 						continue;
@@ -942,7 +943,7 @@ static void MessSpecifyImage(int drvindex, const device_image_interface *dev, LP
 
 	if (file_extension)
 	{
-		for (device_image_interface &dev : image_interface_iterator(s_config->mconfig->root_device()))
+		for (device_image_interface &dev : image_interface_enumerator(s_config->mconfig->root_device()))
 		{
 			if (!dev.user_loadable())
 				continue;
@@ -978,7 +979,7 @@ static void MessRemoveImage(int drvindex, const char *pszFilename)
 	//o.set_value(OPTION_SYSTEMNAME, driver_list::driver(drvindex).name, OPTION_PRIORITY_CMDLINE);
 	load_options(o, OPTIONS_GAME, drvindex, 1);
 
-	for (device_image_interface &dev : image_interface_iterator(s_config->mconfig->root_device()))
+	for (device_image_interface &dev : image_interface_enumerator(s_config->mconfig->root_device()))
 	{
 		if (!dev.user_loadable())
 			continue;
@@ -1023,7 +1024,7 @@ static void MessRefreshPicker(void)
 	/* allocate the machine config */
 	machine_config config(driver_list::driver(s_config->driver_index), o);
 
-	for (device_image_interface &dev : image_interface_iterator(config.root_device()))
+	for (device_image_interface &dev : image_interface_enumerator(config.root_device()))
 	{
 		if (!dev.user_loadable())
 			continue;
@@ -1174,7 +1175,7 @@ static void SetupImageTypes(const machine_config *config, mess_image_type *types
 	// Nobody used this so we will usurp it to just exit instead
 	{
 		/* special case; all non-printer devices */
-		for (device_image_interface &device : image_interface_iterator(s_config->mconfig->root_device()))
+		for (device_image_interface &device : image_interface_enumerator(s_config->mconfig->root_device()))
 		{
 			if (!device.user_loadable())
 				continue;
@@ -1215,7 +1216,7 @@ static void CleanupImageTypes(mess_image_type *types, int count)
 
 static void MessSetupDevice(common_file_dialog_proc cfd, const device_image_interface *dev)
 {
-	string dst = GetSWDir();
+	string dst = dir_get_value(13);
 	// We only want the first path; throw out the rest
 	size_t i = dst.find(';');
 	if (i != string::npos)
@@ -1232,11 +1233,11 @@ static void MessSetupDevice(common_file_dialog_proc cfd, const device_image_inte
 	machine_config config(driver_list::driver(drvindex), MameUIGlobal());
 
 	mess_image_type imagetypes[256];
-	SetupImageTypes(&config, imagetypes, ARRAY_LENGTH(imagetypes), true, dev);
+	SetupImageTypes(&config, imagetypes, std::size(imagetypes), true, dev);
 	TCHAR filename[MAX_PATH];
 	BOOL bResult = CommonFileImageDialog(t_s, cfd, filename, &config, imagetypes);
 	free(t_s);
-	CleanupImageTypes(imagetypes, ARRAY_LENGTH(imagetypes));
+	CleanupImageTypes(imagetypes, std::size(imagetypes));
 
 	if (bResult)
 	{
@@ -1271,13 +1272,13 @@ static BOOL MView_GetOpenFileName(HWND hwndMView, const machine_config *config, 
 	int drvindex = Picker_GetSelectedItem(hwndList);
 	if (drvindex < 0)
 		return false;
-	string dst, opt_name = dev->instance_name();
+	string opt_name = dev->instance_name();
 	windows_options o;
 	load_options(o, OPTIONS_GAME, drvindex, 1);
-	const char* s = o.value(opt_name.c_str());
+	string s = o.value(opt_name);
 
 	/* Get the path to the currently mounted image */
-	util::zippath_parent(dst, s);
+	string dst = util::zippath_parent(s);
 	if ((!osd::directory::open(dst.c_str())) || (dst.find(':') == string::npos))
 	{
 		// no image loaded, use swpath
@@ -1290,11 +1291,11 @@ static BOOL MView_GetOpenFileName(HWND hwndMView, const machine_config *config, 
 	}
 
 	mess_image_type imagetypes[256];
-	SetupImageTypes(config, imagetypes, ARRAY_LENGTH(imagetypes), true, dev);
+	SetupImageTypes(config, imagetypes, std::size(imagetypes), true, dev);
 	TCHAR *t_s = ui_wstring_from_utf8(dst.c_str());
 	BOOL bResult = CommonFileImageDialog(t_s, GetOpenFileName, pszFilename, config, imagetypes);
 	free(t_s);
-	CleanupImageTypes(imagetypes, ARRAY_LENGTH(imagetypes));
+	CleanupImageTypes(imagetypes, std::size(imagetypes));
 
 	if (bResult)
 	{
@@ -1331,11 +1332,11 @@ static BOOL MView_GetOpenItemName(HWND hwndMView, const machine_config *config, 
 		osd_get_full_path(dst, ".");
 
 	mess_image_type imagetypes[256];
-	SetupImageTypes(config, imagetypes, ARRAY_LENGTH(imagetypes), true, NULL); // just get zip & 7z
+	SetupImageTypes(config, imagetypes, std::size(imagetypes), true, NULL); // just get zip & 7z
 	TCHAR *t_s = ui_wstring_from_utf8(dst.c_str());
 	BOOL bResult = CommonFileImageDialog(t_s, GetOpenFileName, pszFilename, config, imagetypes);
 	free(t_s);
-	CleanupImageTypes(imagetypes, ARRAY_LENGTH(imagetypes));
+	CleanupImageTypes(imagetypes, std::size(imagetypes));
 
 	if (bResult)
 	{
@@ -1386,10 +1387,10 @@ static BOOL MView_GetCreateFileName(HWND hwndMView, const machine_config *config
 
 	TCHAR *t_s = ui_wstring_from_utf8(dst.c_str());
 	mess_image_type imagetypes[256];
-	SetupImageTypes(config, imagetypes, ARRAY_LENGTH(imagetypes), true, dev);
+	SetupImageTypes(config, imagetypes, std::size(imagetypes), true, dev);
 	BOOL bResult = CommonFileImageDialog(t_s, GetSaveFileName, pszFilename, config, imagetypes);
 	free(t_s);
-	CleanupImageTypes(imagetypes, ARRAY_LENGTH(imagetypes));
+	CleanupImageTypes(imagetypes, std::size(imagetypes));
 
 	if (bResult)
 	{
@@ -1526,7 +1527,7 @@ static void SoftwarePicker_EnteringItem(HWND hwndSoftwarePicker, int nItem)
 		MessSpecifyImage(drvindex, NULL, pszFullName);
 
 		// Set up g_szSelectedItem, for the benefit of UpdateScreenShot()
-		strncpyz(g_szSelectedItem, pszName, ARRAY_LENGTH(g_szSelectedItem));
+		strncpyz(g_szSelectedItem, pszName, std::size(g_szSelectedItem));
 		LPSTR s = strrchr(g_szSelectedItem, '.');
 		if (s)
 			*s = '\0';
@@ -1597,7 +1598,7 @@ static void SoftwareList_EnteringItem(HWND hwndSoftwareList, int nItem)
 		LPCSTR pszFullName = SoftwareList_LookupFullname(hwndSoftwareList, nItem); // for the screenshot and SetSoftware.
 
 		// For UpdateScreenShot()
-		strncpyz(g_szSelectedItem, pszFullName, ARRAY_LENGTH(g_szSelectedItem));
+		strncpyz(g_szSelectedItem, pszFullName, std::size(g_szSelectedItem));
 		UpdateScreenShot();
 		// use SOFTWARENAME option to properly load a multipart set
 		SetSelectedSoftware(drvindex, "", pszFullName);
@@ -1842,7 +1843,7 @@ static void SetupSoftwareTabView(void)
 
 	memset(&opts, 0, sizeof(opts));
 	opts.pCallbacks = &s_softwareTabViewCallbacks;
-	opts.nTabCount = ARRAY_LENGTH(s_tabs);
+	opts.nTabCount = std::size(s_tabs);
 
 	SetupTabView(GetDlgItem(GetMainWindow(), IDC_SWTAB), &opts);
 }
@@ -1859,14 +1860,14 @@ static void MView_ButtonClick(HWND hwndMView, struct MViewEntry *pEnt, HWND hwnd
 
 	HMENU hMenu = CreatePopupMenu();
 
-	for (software_list_device &swlist : software_list_device_iterator(pMViewInfo->config->mconfig->root_device()))
+	for (software_list_device &swlist : software_list_device_enumerator(pMViewInfo->config->mconfig->root_device()))
 	{
 		for (const software_info &swinfo : swlist.get_info())
 		{
 			const software_part &part = swinfo.parts().front();
 			if (swlist.is_compatible(part) == SOFTWARE_IS_COMPATIBLE)
 			{
-				for (device_image_interface &image : image_interface_iterator(pMViewInfo->config->mconfig->root_device()))
+				for (device_image_interface &image : image_interface_enumerator(pMViewInfo->config->mconfig->root_device()))
 				{
 					if (!image.user_loadable())
 						continue;
@@ -1887,7 +1888,7 @@ static void MView_ButtonClick(HWND hwndMView, struct MViewEntry *pEnt, HWND hwnd
 	if (software)
 	{
 		string as, dst;
-		string t = GetRomDirs();
+		string t = dir_get_value(2);
 		char rompath[t.size()+1];
 		strcpy(rompath, t.c_str());
 		char* sl_root = strtok(rompath, ";");
@@ -1928,17 +1929,17 @@ static void MView_ButtonClick(HWND hwndMView, struct MViewEntry *pEnt, HWND hwnd
 	switch(rc)
 	{
 		case 1:
-			res = pMViewInfo->pCallbacks->pfnGetOpenFileName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, ARRAY_LENGTH(szPath));
+			res = pMViewInfo->pCallbacks->pfnGetOpenFileName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, std::size(szPath));
 			break;
 		case 2:
-			res = pMViewInfo->pCallbacks->pfnGetCreateFileName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, ARRAY_LENGTH(szPath));
+			res = pMViewInfo->pCallbacks->pfnGetCreateFileName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, std::size(szPath));
 			break;
 		case 3:
-			res = pMViewInfo->pCallbacks->pfnUnmount(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, ARRAY_LENGTH(szPath));
+			res = pMViewInfo->pCallbacks->pfnUnmount(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, std::size(szPath));
 			memset(szPath, 0, sizeof(szPath));
 			break;
 		case 4:
-			res = pMViewInfo->pCallbacks->pfnGetOpenItemName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, ARRAY_LENGTH(szPath));
+			res = pMViewInfo->pCallbacks->pfnGetOpenItemName(hwndMView, pMViewInfo->config->mconfig, pEnt->dev, szPath, std::size(szPath));
 			break;
 		default:
 			break;

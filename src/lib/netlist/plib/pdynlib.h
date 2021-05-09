@@ -1,4 +1,4 @@
-// license:GPL-2.0+
+// license:BSD-3-Clause
 // copyright-holders:Couriersud
 
 #ifndef PDYNLIB_H_
@@ -31,12 +31,15 @@ namespace plib {
 		template <typename T>
 		T getsym(const pstring &name) const noexcept
 		{
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 			return reinterpret_cast<T>(getsym_p(name));
 		}
 
 	protected:
-		bool m_is_loaded;
+		void set_loaded(bool v) noexcept { m_is_loaded = v; }
 		virtual void *getsym_p(const pstring &name) const noexcept = 0;
+	private:
+		bool m_is_loaded;
 	};
 
 	class dynlib : public dynlib_base
@@ -70,7 +73,7 @@ namespace plib {
 		: m_syms(syms)
 		{
 			if (syms != nullptr)
-				m_is_loaded = true;
+				set_loaded(true);
 		}
 
 	protected:

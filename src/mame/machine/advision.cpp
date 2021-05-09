@@ -33,8 +33,11 @@ void advision_state::machine_start()
 	m_bank1->configure_entry(0, memregion(I8048_TAG)->base());
 	if (m_cart_rom)
 		m_bank1->configure_entry(1, m_cart_rom->base());
-	m_maincpu->space(AS_PROGRAM).install_readwrite_bank(0x0000, 0x03ff, "bank1");
+	m_maincpu->space(AS_PROGRAM).install_readwrite_bank(0x0000, 0x03ff, m_bank1);
 	m_bank1->set_entry(0);
+
+	m_sound_d = 0;
+	m_sound_g = 0;
 
 	/* allocate external RAM */
 	m_ext_ram.resize(0x400);
@@ -71,7 +74,7 @@ void advision_state::machine_reset()
 
 /* Bank Switching */
 
-WRITE8_MEMBER( advision_state::bankswitch_w )
+void advision_state::bankswitch_w(uint8_t data)
 {
 	m_ea_bank = BIT(data, 2);
 	m_rambank = (data & 0x03) << 8;
@@ -83,7 +86,7 @@ WRITE8_MEMBER( advision_state::bankswitch_w )
 
 /* External RAM */
 
-READ8_MEMBER( advision_state::ext_ram_r )
+uint8_t advision_state::ext_ram_r(offs_t offset)
 {
 	uint8_t data = m_ext_ram[m_rambank + offset];
 
@@ -98,7 +101,7 @@ READ8_MEMBER( advision_state::ext_ram_r )
 	return data;
 }
 
-WRITE8_MEMBER( advision_state::ext_ram_w )
+void advision_state::ext_ram_w(offs_t offset, uint8_t data)
 {
 	m_ext_ram[m_rambank + offset] = data;
 }
@@ -110,7 +113,7 @@ TIMER_CALLBACK_MEMBER( advision_state::sound_cmd_sync )
 	m_sound_cmd = param;
 }
 
-READ8_MEMBER( advision_state::sound_cmd_r )
+uint8_t advision_state::sound_cmd_r()
 {
 	return m_sound_cmd;
 }
@@ -121,14 +124,14 @@ void advision_state::update_dac()
 	m_dac->write(translate[(m_sound_g << 1) | m_sound_d]);
 }
 
-WRITE8_MEMBER( advision_state::sound_g_w )
+void advision_state::sound_g_w(uint8_t data)
 {
 	m_sound_g = data & 0x01;
 
 	update_dac();
 }
 
-WRITE8_MEMBER( advision_state::sound_d_w )
+void advision_state::sound_d_w(uint8_t data)
 {
 	m_sound_d = data & 0x01;
 
@@ -137,7 +140,7 @@ WRITE8_MEMBER( advision_state::sound_d_w )
 
 /* Video */
 
-WRITE8_MEMBER( advision_state::av_control_w )
+void advision_state::av_control_w(uint8_t data)
 {
 	machine().scheduler().synchronize(timer_expired_delegate(FUNC(advision_state::sound_cmd_sync), this), data >> 4);
 
@@ -174,7 +177,7 @@ READ_LINE_MEMBER( advision_state::vsync_r )
 
 /* Input */
 
-READ8_MEMBER( advision_state::controller_r )
+uint8_t advision_state::controller_r()
 {
 	// Get joystick switches
 	uint8_t in = m_joy->read();
